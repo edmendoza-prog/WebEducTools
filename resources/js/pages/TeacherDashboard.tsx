@@ -4,6 +4,7 @@ import { csrfFetch } from '../lib/csrf';
 import {
   Bell,
   BookOpen,
+  ChevronDown,
   CircleHelp,
   ChevronRight,
   ClipboardCheck,
@@ -12,6 +13,7 @@ import {
   FolderClosed,
   Gamepad2,
   Home,
+  Layers3,
   ListChecks,
   LogOut,
   Menu,
@@ -39,6 +41,14 @@ type ProfileMenuItem = {
   key: string;
   label: string;
   icon: React.ReactNode;
+};
+
+type CreateMenuItem = {
+  key: string;
+  label: string;
+  icon: React.ReactNode;
+  iconTone: 'flashcard' | 'study-guide' | 'practice-test';
+  path: string;
 };
 
 type AuthMeResponse = {
@@ -90,6 +100,30 @@ const profileSecondaryItems: ProfileMenuItem[] = [
   { key: 'privacy', label: 'Privacy policy', icon: <Shield size={18} /> },
   { key: 'help', label: 'Help and feedback', icon: <CircleHelp size={18} /> },
   { key: 'group-discounts', label: 'Group discounts', icon: <Flame size={18} /> },
+];
+
+const createMenuItems: CreateMenuItem[] = [
+  {
+    key: 'flashcard-set',
+    label: 'Flashcard set',
+    icon: <Layers3 size={16} />,
+    iconTone: 'flashcard',
+    path: '/teacher-dashboard/create-content',
+  },
+  {
+    key: 'study-guide',
+    label: 'Study guide',
+    icon: <FileText size={16} />,
+    iconTone: 'study-guide',
+    path: '/teacher-dashboard/study-guides',
+  },
+  {
+    key: 'practice-test',
+    label: 'Practice test',
+    icon: <ClipboardCheck size={16} />,
+    iconTone: 'practice-test',
+    path: '/teacher-dashboard/practice-tests',
+  },
 ];
 
 function rotateCards<T>(items: T[], offset: number): T[] {
@@ -165,12 +199,14 @@ export default function TeacherDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isCreateMenuOpen, setIsCreateMenuOpen] = useState(false);
   const [activeProfileItem, setActiveProfileItem] = useState('settings');
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isPageSwitching, setIsPageSwitching] = useState(false);
   const [profileName, setProfileName] = useState('Teacher');
   const [profileEmail, setProfileEmail] = useState('teacher@example.com');
   const profileMenuRef = useRef<HTMLDivElement>(null);
+  const createMenuRef = useRef<HTMLDivElement>(null);
   const pageSwitchTimerRef = useRef<number | null>(null);
 
   const activeTeacherSection =
@@ -210,12 +246,12 @@ export default function TeacherDashboard() {
 
   useEffect(() => {
     const onDocumentMouseDown = (event: MouseEvent) => {
-      if (!profileMenuRef.current) {
-        return;
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setIsProfileMenuOpen(false);
       }
 
-      if (!profileMenuRef.current.contains(event.target as Node)) {
-        setIsProfileMenuOpen(false);
+      if (createMenuRef.current && !createMenuRef.current.contains(event.target as Node)) {
+        setIsCreateMenuOpen(false);
       }
     };
 
@@ -280,6 +316,11 @@ export default function TeacherDashboard() {
     }, 220);
   };
 
+  const handleCreateMenuItemClick = (path: string) => {
+    setIsCreateMenuOpen(false);
+    navigateFromSidebar(path);
+  };
+
   return (
     <div className="td-page">
       <aside className="td-sidebar">
@@ -287,7 +328,10 @@ export default function TeacherDashboard() {
           <button className="td-icon-btn" type="button" aria-label="Open menu">
             <Menu size={22} />
           </button>
-          <div className="td-logo">Q</div>
+          <div className="td-logo" aria-label="Web Educ Tools">
+            <span>Web Educ</span>
+            <span>Tools</span>
+          </div>
         </div>
 
         <nav className="td-nav">
@@ -418,10 +462,40 @@ export default function TeacherDashboard() {
           <div className="td-layout-grid">
             <div className="td-content-col">
               <section className="td-actions-row">
-                <button className="td-action-card" type="button">
-                  <FileText size={20} />
-                  <span>Create content</span>
-                </button>
+                <div className="td-create-menu" ref={createMenuRef}>
+                  <button
+                    className={`td-create-trigger ${isCreateMenuOpen ? 'is-open' : ''}`}
+                    type="button"
+                    aria-haspopup="menu"
+                    aria-expanded={isCreateMenuOpen}
+                    onClick={() => setIsCreateMenuOpen((prev) => !prev)}
+                  >
+                    <span className="td-create-trigger-icon" aria-hidden="true">
+                      <Plus size={18} />
+                    </span>
+                    <span>Create content</span>
+                    <ChevronDown size={16} className="td-create-trigger-chevron" aria-hidden="true" />
+                  </button>
+
+                  {isCreateMenuOpen && (
+                    <div className="td-create-dropdown" role="menu" aria-label="Create content options">
+                      {createMenuItems.map((item) => (
+                        <button
+                          key={item.key}
+                          type="button"
+                          className="td-create-item"
+                          role="menuitem"
+                          onClick={() => handleCreateMenuItemClick(item.path)}
+                        >
+                          <span className={`td-create-item-icon is-${item.iconTone}`} aria-hidden="true">
+                            {item.icon}
+                          </span>
+                          <span>{item.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <button className="td-action-card" type="button">
                   <ListChecks size={20} />
                   <span>Assign an activity</span>

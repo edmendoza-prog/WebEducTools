@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-route
 import Home from './pages/home';
 import StudentDasboard from './pages/StudentDasboard';
 import TeacherDashboard from './pages/TeacherDashboard';
+import TeacherCreateContent from './pages/TeacherCreateContent';
 import AuthPortal from './pages/AuthPortal';
 
 type Role = 'student' | 'teacher';
@@ -154,6 +155,11 @@ function AnimatedRoutes() {
       <TeacherDashboard />
     </RoleGate>
   );
+  const teacherCreatePage = (
+    <RoleGate allowedRole="teacher">
+      <TeacherCreateContent />
+    </RoleGate>
+  );
 
   return (
     <div key={`${location.pathname}${location.search}`} className="route-transition">
@@ -181,6 +187,7 @@ function AnimatedRoutes() {
         <Route path="/teacher-dashboard/assign-activity" element={teacherPage} />
         <Route path="/teacher-dashboard/study-guides" element={teacherPage} />
         <Route path="/teacher-dashboard/practice-tests" element={teacherPage} />
+        <Route path="/teacher-dashboard/create-content" element={teacherCreatePage} />
       </Routes>
     </div>
   );

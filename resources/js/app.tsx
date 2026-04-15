@@ -176,17 +176,26 @@ function AnimatedRoutes() {
         <Route path="/student-dashboard/study-groups" element={studentPage} />
         <Route path="/student-dashboard/notifications" element={studentPage} />
         <Route path="/student-dashboard/flashcards" element={studentPage} />
+        <Route path="/student-dashboard/quiz" element={studentPage} />
         <Route path="/student-dashboard/study-guides" element={studentPage} />
         <Route path="/student-dashboard/practice-tests" element={studentPage} />
+        <Route path="/student-dashboard/reports" element={studentPage} />
+        <Route path="/student-dashboard/achievements" element={studentPage} />
         <Route path="/student-dashboard/expert-solutions" element={studentPage} />
         <Route path="/student-dashboard/folders/new" element={studentPage} />
         <Route path="/teacher-dashboard" element={teacherPage} />
         <Route path="/teacher-dashboard/library" element={teacherPage} />
+        <Route path="/teacher-dashboard/classes" element={teacherPage} />
+        <Route path="/teacher-dashboard/students" element={teacherPage} />
         <Route path="/teacher-dashboard/notifications" element={teacherPage} />
         <Route path="/teacher-dashboard/new-class" element={teacherPage} />
         <Route path="/teacher-dashboard/assign-activity" element={teacherPage} />
         <Route path="/teacher-dashboard/study-guides" element={teacherPage} />
         <Route path="/teacher-dashboard/practice-tests" element={teacherPage} />
+        <Route path="/teacher-dashboard/reports" element={teacherPage} />
+        <Route path="/teacher-dashboard/achievements" element={teacherPage} />
+        <Route path="/teacher-dashboard/gamification" element={teacherPage} />
+        <Route path="/teacher-dashboard/sharing" element={teacherPage} />
         <Route path="/teacher-dashboard/create-content" element={teacherCreatePage} />
       </Routes>
     </div>

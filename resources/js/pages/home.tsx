@@ -201,8 +201,8 @@ export default function Home() {
           </div>
 
           <div className="header-actions">
-            <button
-              type="button"
+            <Link
+              to="/signup"
               style={{
                 background: 'none',
                 border: 'none',
@@ -213,10 +213,11 @@ export default function Home() {
                 alignItems: 'center',
                 gap: '0.25rem',
               }}
+              className="no-underline"
             >
               <Plus size={16} /> Create
-            </button>
-            <Link to="/login/student" className="btn btn-primary">Log in</Link>
+            </Link>
+            <Link to="/login" className="btn btn-primary">Log in</Link>
           </div>
         </div>
       </header>
@@ -227,9 +228,9 @@ export default function Home() {
           <p>
               Master whatever you're learning with WebEduc's interactive flashcards, practice tests and study activities.
           </p>
-          <Link to="/signup/student" className="btn btn-primary btn-lg">Sign up for free</Link>
+          <Link to="/signup" className="btn btn-primary btn-lg">Sign up for free</Link>
           <p>
-            <Link to="/signup/teacher" className="teacher-link">I'm a teacher</Link>
+            <Link to="/signup?role=teacher" className="teacher-link">I'm a teacher</Link>
           </p>
         </div>
       </section>

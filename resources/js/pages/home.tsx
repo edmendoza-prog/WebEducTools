@@ -206,7 +206,7 @@ export default function Home() {
               style={{
                 background: 'none',
                 border: 'none',
-                color: '#2563eb',
+                color: '#7678ed',
                 fontWeight: 600,
                 cursor: 'pointer',
                 display: 'inline-flex',

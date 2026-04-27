@@ -6,6 +6,8 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
 {
@@ -34,7 +36,7 @@ class AuthController extends Controller
         $credentials = $request->validate([
             'email' => ['required', 'string', 'email'],
             'password' => ['required', 'string'],
-            'expected_role' => ['nullable', 'in:student,teacher'],
+            'expected_role' => ['nullable', 'in:student,teacher,admin'],
         ]);
 
         $expectedRole = $credentials['expected_role'] ?? null;
@@ -69,21 +71,77 @@ class AuthController extends Controller
 
     public function me(Request $request): JsonResponse
     {
-        if (! $request->user()) {
+        $user = $request->user();
+
+        if (! $user) {
             return response()->json([
                 'authenticated' => false,
             ], 401);
         }
 
+        $profileImagePath = $user->profile_image_path ?? null;
+
         return response()->json([
             'authenticated' => true,
-            'user' => $request->user(),
+            'user' => [
+                'id' => (int) $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+                'profileImageUrl' => $profileImagePath ? asset('storage/' . $profileImagePath) : null,
+            ],
+        ]);
+    }
+
+    public function updateProfile(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (! $user) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        $validated = $request->validate([
+            'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'email' => ['sometimes', 'required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'profileImage' => ['nullable', 'image', 'max:4096'],
+        ]);
+
+        if (array_key_exists('name', $validated)) {
+            $user->name = $validated['name'];
+        }
+
+        if (array_key_exists('email', $validated)) {
+            $user->email = $validated['email'];
+        }
+
+        if ($request->hasFile('profileImage')) {
+            if ($user->profile_image_path) {
+                Storage::disk('public')->delete($user->profile_image_path);
+            }
+
+            $user->profile_image_path = $request->file('profileImage')->store('profile-images', 'public');
+        }
+
+        $user->save();
+
+        $profileImagePath = $user->profile_image_path ?? null;
+
+        return response()->json([
+            'message' => 'Profile updated successfully.',
+            'user' => [
+                'id' => (int) $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+                'profileImageUrl' => $profileImagePath ? asset('storage/' . $profileImagePath) : null,
+            ],
         ]);
     }
 
     public function logout(Request $request): JsonResponse
     {
-        Auth::logout();
+        Auth::guard('web')->logout();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

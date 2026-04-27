@@ -3,7 +3,7 @@ import { CircleHelp, Eye, X } from 'lucide-react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { csrfFetch } from '../lib/csrf';
 
-type Role = 'student' | 'teacher';
+type Role = 'student' | 'teacher' | 'admin';
 type Mode = 'login' | 'signup';
 
 type AuthResponse = {
@@ -93,8 +93,8 @@ export default function AuthPortal() {
         return;
       }
 
-      const targetRole = data?.user?.role === 'teacher' ? 'teacher' : data?.user?.role === 'student' ? 'student' : role;
-      navigate(targetRole === 'teacher' ? '/teacher-dashboard' : '/student-dashboard');
+      const targetRole = data?.user?.role === 'teacher' ? 'teacher' : data?.user?.role === 'admin' ? 'admin' : data?.user?.role === 'student' ? 'student' : role;
+      navigate(targetRole === 'admin' ? '/admin-dashboard' : targetRole === 'teacher' ? '/teacher-dashboard' : '/student-dashboard');
     } catch {
       setError('Unable to connect to the server.');
     } finally {

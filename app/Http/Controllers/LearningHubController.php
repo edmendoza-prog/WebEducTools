@@ -31,58 +31,7 @@ class LearningHubController extends Controller
         }
 
         if ((int) DB::table('badges')->count() === 0) {
-            DB::table('badges')->insert([
-                [
-                    'code' => 'flashcard-master',
-                    'name' => 'Flashcard Master',
-                    'description' => 'Complete 20 flashcards marked as known.',
-                    'requirement_type' => 'flashcards_known',
-                    'requirement_value' => 20,
-                    'xp_reward' => 60,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ],
-                [
-                    'code' => 'quiz-champion',
-                    'name' => 'Quiz Champion',
-                    'description' => 'Reach at least 85% on a quiz.',
-                    'requirement_type' => 'best_quiz_score',
-                    'requirement_value' => 85,
-                    'xp_reward' => 70,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ],
-                [
-                    'code' => 'study-streak',
-                    'name' => 'Study Streak',
-                    'description' => 'Maintain a 7-day study streak.',
-                    'requirement_type' => 'streak_days',
-                    'requirement_value' => 7,
-                    'xp_reward' => 50,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ],
-                [
-                    'code' => 'perfect-score',
-                    'name' => 'Perfect Score',
-                    'description' => 'Get 100% on a quiz.',
-                    'requirement_type' => 'best_quiz_score',
-                    'requirement_value' => 100,
-                    'xp_reward' => 90,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ],
-                [
-                    'code' => 'fast-finisher',
-                    'name' => 'Fast Finisher',
-                    'description' => 'Complete 5 quiz attempts.',
-                    'requirement_type' => 'quiz_attempts',
-                    'requirement_value' => 5,
-                    'xp_reward' => 40,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ],
-            ]);
+            // Keep the badge catalog empty until real badges are created.
         }
     }
 
@@ -328,59 +277,74 @@ class LearningHubController extends Controller
         return null;
     }
 
-    private function formatTeacherDashboard(int $teacherId): array
+    private function teacherStudySets(int $teacherId): array
     {
-        $studySetRows = DB::table('study_sets')->where('teacher_id', $teacherId)->get();
+        return DB::table('study_sets')
+            ->where('teacher_id', $teacherId)
+            ->get()
+            ->map(function ($set) {
+                return [
+                    'id' => (string) $set->id,
+                    'title' => $set->title,
+                    'subject' => $set->subject,
+                    'className' => $set->class_name,
+                    'visibility' => $set->visibility,
+                    'cards' => (int) $set->cards_count,
+                    'updatedAt' => optional($set->updated_at)?->diffForHumans() ?? 'just now',
+                ];
+            })
+            ->values()
+            ->all();
+    }
 
-        $studySets = $studySetRows->map(function ($set) {
-            return [
-                'id' => (string) $set->id,
-                'title' => $set->title,
-                'subject' => $set->subject,
-                'className' => $set->class_name,
-                'visibility' => $set->visibility,
-                'cards' => (int) $set->cards_count,
-                'updatedAt' => optional($set->updated_at)?->diffForHumans() ?? 'just now',
-            ];
-        })->values()->all();
-
-        $studentRows = DB::table('student_progress')
-            ->join('users', 'users.id', '=', 'student_progress.student_id')
-            ->leftJoin('study_sets', 'study_sets.id', '=', 'student_progress.study_set_id')
+    private function teacherStudents(int $teacherId): array
+    {
+        $progressByStudent = DB::table('student_progress')
+            ->join('study_sets', 'study_sets.id', '=', 'student_progress.study_set_id')
             ->where('study_sets.teacher_id', $teacherId)
+            ->groupBy('student_progress.student_id')
+            ->selectRaw('student_progress.student_id, ROUND(AVG(student_progress.completion_rate)) as completion_rate, ROUND(AVG(student_progress.last_score)) as last_score, MAX(student_progress.weak_area) as weak_area, MAX(student_progress.updated_at) as updated_at');
+
+        return DB::table('users')
+            ->leftJoin('class_students', 'class_students.student_id', '=', 'users.id')
+            ->leftJoin('classes', function ($join) use ($teacherId) {
+                $join->on('classes.id', '=', 'class_students.class_id')
+                    ->where('classes.teacher_id', '=', $teacherId);
+            })
+            ->leftJoinSub($progressByStudent, 'progress', function ($join) {
+                $join->on('progress.student_id', '=', 'users.id');
+            })
+            ->where('users.role', 'student')
+            ->groupBy('users.id', 'users.name', 'progress.completion_rate', 'progress.last_score', 'progress.weak_area', 'progress.updated_at')
             ->select(
                 'users.id',
                 'users.name',
-                'study_sets.class_name',
-                'student_progress.completion_rate',
-                'student_progress.last_score',
-                'student_progress.weak_area',
-                'student_progress.updated_at'
+                DB::raw("COALESCE(MAX(classes.name), 'Unassigned') as class_name"),
+                'progress.completion_rate',
+                'progress.last_score',
+                'progress.weak_area',
+                'progress.updated_at'
             )
-            ->orderByDesc('student_progress.updated_at')
-            ->get();
+            ->orderBy('users.name')
+            ->get()
+            ->map(function ($row) {
+                return [
+                    'id' => 'st-'.$row->id,
+                    'name' => $row->name,
+                    'className' => $row->class_name ?? 'Unassigned',
+                    'completion' => (int) ($row->completion_rate ?? 0),
+                    'quizScore' => (int) ($row->last_score ?? 0),
+                    'weakArea' => $row->weak_area ?? 'Needs review',
+                    'lastActive' => optional($row->updated_at)?->diffForHumans() ?? 'just now',
+                ];
+            })
+            ->values()
+            ->all();
+    }
 
-        if ($studentRows->isEmpty()) {
-            $studentRows = collect([
-                (object) ['id' => 1, 'name' => 'Alyssa Cruz', 'class_name' => 'Grade 10 - A', 'completion_rate' => 92, 'last_score' => 95, 'weak_area' => 'Biology vocab', 'updated_at' => now()->subMinutes(10)],
-                (object) ['id' => 2, 'name' => 'Marco Reyes', 'class_name' => 'Grade 10 - B', 'completion_rate' => 74, 'last_score' => 81, 'weak_area' => 'Civics short answers', 'updated_at' => now()->subMinutes(25)],
-                (object) ['id' => 3, 'name' => 'Nia Santos', 'class_name' => 'Grade 9 - A', 'completion_rate' => 58, 'last_score' => 67, 'weak_area' => 'Algebra transformations', 'updated_at' => now()->subHour()],
-            ]);
-        }
-
-        $students = $studentRows->map(function ($row) {
-            return [
-                'id' => 'st-'.$row->id,
-                'name' => $row->name,
-                'className' => $row->class_name ?? 'Unassigned',
-                'completion' => (int) ($row->completion_rate ?? 0),
-                'quizScore' => (int) ($row->last_score ?? 0),
-                'weakArea' => $row->weak_area ?? 'Needs review',
-                'lastActive' => optional($row->updated_at)?->diffForHumans() ?? 'just now',
-            ];
-        })->values()->all();
-
-        $classMetrics = collect($students)
+    private function teacherClassMetrics(array $students): array
+    {
+        return collect($students)
             ->groupBy('className')
             ->map(function ($rows, $className) {
                 $avgScore = (int) round(collect($rows)->avg('quizScore'));
@@ -395,48 +359,41 @@ class LearningHubController extends Controller
             })
             ->values()
             ->all();
+    }
 
-        if (empty($classMetrics)) {
-            $classMetrics = [
-                ['className' => 'Grade 10 - A', 'avgScore' => 91, 'completionRate' => 88, 'engagement' => 94],
-                ['className' => 'Grade 10 - B', 'avgScore' => 82, 'completionRate' => 73, 'engagement' => 79],
-                ['className' => 'Grade 9 - A', 'avgScore' => 76, 'completionRate' => 68, 'engagement' => 71],
-            ];
-        }
+    private function teacherSummaryMetrics(array $studySets, array $classMetrics): array
+    {
+        $averageEngagement = $classMetrics === [] ? 0 : (int) round(collect($classMetrics)->avg('engagement'));
+        $averageCompletion = $classMetrics === [] ? 0 : (int) round(collect($classMetrics)->avg('completionRate'));
+        $averageScore = $classMetrics === [] ? 0 : (int) round(collect($classMetrics)->avg('avgScore'));
 
-        $summaryMetrics = [
+        return [
             [
                 'label' => 'Total study sets created',
-                'value' => (string) max(count($studySets), 1),
-                'delta' => '+'.max(1, (int) round(count($studySets) / 3)).' this week',
+                'value' => (string) count($studySets),
+                'delta' => count($studySets) > 0 ? '+'.max(1, (int) round(count($studySets) / 3)).' this week' : 'No activity yet',
             ],
             [
                 'label' => 'Student engagement',
-                'value' => (string) ((int) round(collect($classMetrics)->avg('engagement'))).'%',
-                'delta' => 'Live from student activity',
+                'value' => $averageEngagement.'%',
+                'delta' => $averageEngagement > 0 ? 'Live from student activity' : 'No activity yet',
             ],
             [
                 'label' => 'Class completion',
-                'value' => (string) ((int) round(collect($classMetrics)->avg('completionRate'))).'%',
-                'delta' => 'Pulled from progress endpoint',
+                'value' => $averageCompletion.'%',
+                'delta' => $averageCompletion > 0 ? 'Pulled from progress endpoint' : 'No activity yet',
             ],
             [
                 'label' => 'Average quiz score',
-                'value' => (string) ((int) round(collect($classMetrics)->avg('avgScore'))).'%',
-                'delta' => 'Synchronized with submissions',
+                'value' => $averageScore.'%',
+                'delta' => $averageScore > 0 ? 'Synchronized with submissions' : 'No activity yet',
             ],
         ];
+    }
 
-        $reportPoints = [
-            ['label' => 'Mon', 'engagement' => 68, 'completion' => 55, 'score' => 74],
-            ['label' => 'Tue', 'engagement' => 72, 'completion' => 61, 'score' => 77],
-            ['label' => 'Wed', 'engagement' => 81, 'completion' => 70, 'score' => 82],
-            ['label' => 'Thu', 'engagement' => 78, 'completion' => 75, 'score' => 80],
-            ['label' => 'Fri', 'engagement' => 86, 'completion' => 83, 'score' => 88],
-            ['label' => 'Sat', 'engagement' => 89, 'completion' => 86, 'score' => 90],
-        ];
-
-        $activities = DB::table('notifications')
+    private function teacherActivities(int $teacherId): array
+    {
+        return DB::table('notifications')
             ->join('users', 'users.id', '=', 'notifications.user_id')
             ->where('notifications.type', 'teacher_alert')
             ->where('notifications.created_by', $teacherId)
@@ -455,15 +412,11 @@ class LearningHubController extends Controller
             })
             ->values()
             ->all();
+    }
 
-        if (empty($activities)) {
-            $activities = [
-                ['id' => 'act-1', 'student' => 'Alyssa Cruz', 'action' => 'Completed quiz', 'resource' => 'Cell Structure Review', 'time' => '10 min ago'],
-                ['id' => 'act-2', 'student' => 'Marco Reyes', 'action' => 'Reopened practice test', 'resource' => 'Constitution and Citizenship', 'time' => '25 min ago'],
-            ];
-        }
-
-        $difficultQuestions = DB::table('quiz_questions')
+    private function teacherDifficultQuestions(int $teacherId): array
+    {
+        return DB::table('quiz_questions')
             ->leftJoin('quiz_attempts', 'quiz_attempts.quiz_id', '=', 'quiz_questions.quiz_id')
             ->leftJoin('study_sets', 'study_sets.id', '=', 'quiz_attempts.study_set_id')
             ->where('study_sets.teacher_id', $teacherId)
@@ -481,17 +434,14 @@ class LearningHubController extends Controller
             })
             ->values()
             ->all();
+    }
 
-        if (empty($difficultQuestions)) {
-            $difficultQuestions = [
-                ['question' => 'Explain why mitochondria are called the powerhouse of the cell.', 'correctRate' => 58, 'attempts' => 42, 'className' => 'Grade 10 - A'],
-                ['question' => 'Identify the amendment that protects due process.', 'correctRate' => 51, 'attempts' => 31, 'className' => 'Grade 10 - B'],
-            ];
-        }
-
-        $badges = DB::table('student_achievements')
+    private function teacherBadgeProgress(): array
+    {
+        return DB::table('student_achievements')
             ->join('achievements', 'achievements.id', '=', 'student_achievements.achievement_id')
             ->join('users', 'users.id', '=', 'student_achievements.student_id')
+            ->whereNotIn('achievements.code', ['flashcard-master', 'quiz-champion', 'study-streak', 'perfect-score'])
             ->select('student_achievements.id', 'achievements.name as badge', 'users.name as student', 'student_achievements.progress', 'achievements.target_value as target', 'achievements.description')
             ->limit(12)
             ->get()
@@ -507,23 +457,23 @@ class LearningHubController extends Controller
             })
             ->values()
             ->all();
+    }
 
-        if (empty($badges)) {
-            $badges = [
-                ['id' => 'b-1', 'badge' => 'Flashcard Master', 'student' => 'Alyssa Cruz', 'progress' => 20, 'target' => 20, 'description' => 'Completed enough cards for mastery.'],
-                ['id' => 'b-2', 'badge' => 'Quiz Champion', 'student' => 'Jomar dela Cruz', 'progress' => 86, 'target' => 90, 'description' => 'Near-perfect quiz streak.'],
-            ];
-        }
+    private function formatTeacherDashboard(int $teacherId): array
+    {
+        $studySets = $this->teacherStudySets($teacherId);
+        $students = $this->teacherStudents($teacherId);
+        $classMetrics = $this->teacherClassMetrics($students);
 
         return [
-            'summaryMetrics' => $summaryMetrics,
+            'summaryMetrics' => $this->teacherSummaryMetrics($studySets, $classMetrics),
             'studySets' => $studySets,
             'students' => $students,
-            'activities' => $activities,
-            'reportPoints' => $reportPoints,
+            'activities' => $this->teacherActivities($teacherId),
+            'reportPoints' => [],
             'classMetrics' => $classMetrics,
-            'badgeProgress' => $badges,
-            'difficultQuestions' => $difficultQuestions,
+            'badgeProgress' => $this->teacherBadgeProgress(),
+            'difficultQuestions' => $this->teacherDifficultQuestions($teacherId),
         ];
     }
 
@@ -571,7 +521,9 @@ class LearningHubController extends Controller
             'description' => ['nullable', 'string'],
             'subject' => ['nullable', 'string', 'max:255'],
             'className' => ['nullable', 'string', 'max:255'],
-            'visibility' => ['required', 'in:public,private'],
+            'class_id' => ['nullable', 'integer', 'exists:classes,id'],
+            'schedule' => ['nullable', 'date'],
+            'visibility' => ['nullable', 'in:public,private'],
             'flashcards' => ['nullable', 'array'],
             'flashcards.*.term' => ['required_with:flashcards', 'string'],
             'flashcards.*.definition' => ['required_with:flashcards', 'string'],
@@ -594,7 +546,9 @@ class LearningHubController extends Controller
                 'description' => $validated['description'] ?? null,
                 'subject' => $validated['subject'] ?? 'General',
                 'class_name' => $validated['className'] ?? 'Unassigned',
-                'visibility' => $validated['visibility'],
+                'class_id' => $validated['class_id'] ?? null,
+                'schedule' => $validated['schedule'] ?? null,
+                'visibility' => $validated['visibility'] ?? 'public',
                 'cards_count' => count($validated['flashcards'] ?? []),
                 'is_published' => true,
                 'created_at' => now(),
@@ -639,8 +593,12 @@ class LearningHubController extends Controller
                 }
             }
 
-            if (($validated['shareMode'] ?? 'class') === 'class') {
-                $studentIds = DB::table('users')->where('role', 'student')->limit(30)->pluck('id');
+            if (($validated['shareMode'] ?? 'class') === 'class' && !empty($validated['class_id'])) {
+                // Assign to all students in the selected class
+                $studentIds = DB::table('class_students')
+                    ->where('class_id', $validated['class_id'])
+                    ->pluck('student_id');
+                    
                 foreach ($studentIds as $studentId) {
                     DB::table('study_set_assignments')->insert([
                         'study_set_id' => $setId,
@@ -656,8 +614,8 @@ class LearningHubController extends Controller
                         'user_id' => $studentId,
                         'created_by' => $request->user()->id,
                         'type' => 'study_set_assigned',
-                        'title' => 'New study set assigned',
-                        'message' => $validated['title'].' is now available in your dashboard.',
+                        'title' => 'New activity assigned',
+                        'message' => $validated['title'].' is now available in your Activity tab.',
                         'payload' => json_encode(['study_set_id' => $setId]),
                         'created_at' => now(),
                         'updated_at' => now(),
@@ -727,6 +685,68 @@ class LearningHubController extends Controller
         }
 
         return response()->json(['message' => 'Study set assigned successfully.']);
+    }
+
+    public function updateStudySet(Request $request, int $studySetId): JsonResponse
+    {
+        if ($error = $this->ensureRole($request, 'teacher')) {
+            return $error;
+        }
+
+        $studySet = DB::table('study_sets')
+            ->where('id', $studySetId)
+            ->where('teacher_id', $request->user()->id)
+            ->first();
+
+        if (! $studySet) {
+            return response()->json(['message' => 'Study set not found.'], 404);
+        }
+
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'subject' => ['nullable', 'string', 'max:255'],
+            'className' => ['nullable', 'string', 'max:255'],
+            'class_id' => ['nullable', 'integer', 'exists:classes,id'],
+            'schedule' => ['nullable', 'date'],
+            'visibility' => ['nullable', 'in:public,private'],
+        ]);
+
+        DB::table('study_sets')
+            ->where('id', $studySetId)
+            ->update([
+                'title' => $validated['title'],
+                'description' => $validated['description'] ?? null,
+                'subject' => $validated['subject'] ?? $studySet->subject,
+                'class_name' => $validated['className'] ?? $studySet->class_name,
+                'class_id' => $validated['class_id'] ?? null,
+                'schedule' => $validated['schedule'] ?? null,
+                'visibility' => $validated['visibility'] ?? $studySet->visibility,
+                'updated_at' => now(),
+            ]);
+
+        return response()->json(['message' => 'Study set updated successfully.']);
+    }
+
+    public function deleteStudySet(Request $request, int $studySetId): JsonResponse
+    {
+        if ($error = $this->ensureRole($request, 'teacher')) {
+            return $error;
+        }
+
+        $studySet = DB::table('study_sets')
+            ->where('id', $studySetId)
+            ->where('teacher_id', $request->user()->id)
+            ->first();
+
+        if (! $studySet) {
+            return response()->json(['message' => 'Study set not found.'], 404);
+        }
+
+        // Delete cascades will handle related flashcards, quizzes, etc.
+        DB::table('study_sets')->where('id', $studySetId)->delete();
+
+        return response()->json(['message' => 'Study set deleted successfully.']);
     }
 
     public function studentDashboard(Request $request): JsonResponse
@@ -874,22 +894,36 @@ class LearningHubController extends Controller
             return $error;
         }
 
-        $quiz = DB::table('quizzes')->orderByDesc('updated_at')->first();
+        $studentId = (int) $request->user()->id;
+
+        $assignedSetIds = DB::table('study_set_assignments')
+            ->where('student_id', $studentId)
+            ->pluck('study_set_id');
+
+        $quiz = DB::table('quizzes')
+            ->join('study_sets', 'study_sets.id', '=', 'quizzes.study_set_id')
+            ->where(function ($query) use ($assignedSetIds) {
+                $query->where('study_sets.visibility', 'public');
+                if ($assignedSetIds->isNotEmpty()) {
+                    $query->orWhereIn('study_sets.id', $assignedSetIds);
+                }
+            })
+            ->whereNotExists(function ($query) use ($studentId) {
+                $query->select(DB::raw(1))
+                    ->from('quiz_attempts')
+                    ->whereColumn('quiz_attempts.quiz_id', 'quizzes.id')
+                    ->where('quiz_attempts.student_id', $studentId);
+            })
+            ->orderByDesc('quizzes.updated_at')
+            ->select('quizzes.id', 'quizzes.study_set_id')
+            ->first();
 
         if (! $quiz) {
             return response()->json([
                 'quizId' => null,
-                'questions' => [
-                    [
-                        'id' => 'q-1',
-                        'type' => 'multiple_choice',
-                        'subject' => 'Biology',
-                        'prompt' => 'Which organelle is known as the powerhouse of the cell?',
-                        'choices' => ['Nucleus', 'Ribosome', 'Mitochondria', 'Golgi Body'],
-                        'answer' => 'Mitochondria',
-                        'explanation' => 'Mitochondria produce ATP, the main energy source used by cells.',
-                    ],
-                ],
+                'questions' => [],
+                'completed' => true,
+                'message' => 'All assigned quizzes are completed.',
             ]);
         }
 
@@ -1383,25 +1417,6 @@ class LearningHubController extends Controller
     {
         $achievements = DB::table('achievements')->get();
 
-        if ($achievements->isEmpty()) {
-            $seed = [
-                ['code' => 'flashcard-master', 'name' => 'Flashcard Master', 'description' => 'Mark 20 cards as known.', 'target_value' => 20],
-                ['code' => 'quiz-champion', 'name' => 'Quiz Champion', 'description' => 'Reach 85% quiz score.', 'target_value' => 85],
-                ['code' => 'study-streak', 'name' => 'Study Streak', 'description' => 'Maintain a 7-day streak.', 'target_value' => 7],
-                ['code' => 'perfect-score', 'name' => 'Perfect Score', 'description' => 'Get 100% in a practice test.', 'target_value' => 100],
-            ];
-
-            foreach ($seed as $item) {
-                DB::table('achievements')->insert([
-                    ...$item,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
-
-            $achievements = DB::table('achievements')->get();
-        }
-
         foreach ($achievements as $achievement) {
             $progress = match ($achievement->code) {
                 'quiz-champion' => $latestScore,
@@ -1488,6 +1503,134 @@ class LearningHubController extends Controller
         return response()->json(['notifications' => $items]);
     }
 
+    public function markStudentNotificationsRead(Request $request): JsonResponse
+    {
+        if ($error = $this->ensureRole($request, 'student')) {
+            return $error;
+        }
+
+        $validated = $request->validate([
+            'type' => ['nullable', 'in:announcement,assignment'],
+        ]);
+
+        $query = DB::table('notifications')
+            ->where('user_id', $request->user()->id)
+            ->whereNull('read_at');
+
+        if (! empty($validated['type'])) {
+            $query->where('type', $validated['type']);
+        }
+
+        $updated = $query->update([
+            'read_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return response()->json([
+            'message' => 'Notifications marked as read.',
+            'updated' => $updated,
+        ]);
+    }
+
+    public function deleteStudentNotification(Request $request, int $notificationId): JsonResponse
+    {
+        if ($error = $this->ensureRole($request, 'student')) {
+            return $error;
+        }
+
+        $deleted = DB::table('notifications')
+            ->where('id', $notificationId)
+            ->where('user_id', $request->user()->id)
+            ->delete();
+
+        if ($deleted === 0) {
+            return response()->json(['message' => 'Notification not found.'], 404);
+        }
+
+        return response()->json(['message' => 'Notification deleted.']);
+    }
+
+    public function studentClassMaterials(Request $request): JsonResponse
+    {
+        if ($error = $this->ensureRole($request, 'student')) {
+            return $error;
+        }
+
+        // Get classes the student is enrolled in
+        $studentClassIds = DB::table('class_students')
+            ->where('student_id', $request->user()->id)
+            ->pluck('class_id');
+
+        // Get study guides for those classes
+        $materials = DB::table('study_guides')
+            ->join('users as teachers', 'study_guides.teacher_id', '=', 'teachers.id')
+            ->leftJoin('classes', 'study_guides.class_id', '=', 'classes.id')
+            ->whereIn('study_guides.class_id', $studentClassIds)
+            ->orderByDesc('study_guides.updated_at')
+            ->get([
+                'study_guides.id',
+                'study_guides.title',
+                'study_guides.subject',
+                'study_guides.content',
+                'study_guides.upload_type',
+                'study_guides.file_path',
+                'study_guides.updated_at',
+                'teachers.name as teacher_name',
+                'classes.name as class_name',
+            ])
+            ->map(fn ($row) => [
+                'id' => (string) $row->id,
+                'title' => $row->title ?? 'Untitled Material',
+                'description' => $row->content ? substr($row->content, 0, 100) : 'No description provided.',
+                'type' => $row->subject ?? 'Study Material',
+                'uploadedBy' => $row->teacher_name ?? 'Teacher',
+                'uploadedAt' => optional($row->updated_at)?->format('M d, Y') ?? 'Unknown date',
+                'fileUrl' => $row->file_path ? '/storage/' . $row->file_path : null,
+            ])
+            ->values();
+
+        return response()->json(['materials' => $materials]);
+    }
+
+    public function studentClassMembers(Request $request): JsonResponse
+    {
+        if ($error = $this->ensureRole($request, 'student')) {
+            return $error;
+        }
+
+        $studentId = $request->user()->id;
+
+        // Get classes the student is enrolled in
+        $studentClassIds = DB::table('class_students')
+            ->where('student_id', $studentId)
+            ->pluck('class_id');
+
+        if ($studentClassIds->isEmpty()) {
+            return response()->json(['members' => []]);
+        }
+
+        // Get all students in those classes
+        $members = DB::table('class_students')
+            ->join('users', 'class_students.student_id', '=', 'users.id')
+            ->whereIn('class_students.class_id', $studentClassIds)
+            ->where('users.role', 'student')
+            ->select('users.id', 'users.name', 'users.profile_image_path')
+            ->distinct()
+            ->orderBy('users.name')
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'id' => (string) $user->id,
+                    'name' => $user->name,
+                    'avatar' => $user->profile_image_path,
+                    'isOnline' => false, // Can be enhanced with real online status
+                ];
+            })
+            ->values();
+
+        return response()->json(['members' => $members]);
+    }
+
     public function awardBadge(Request $request): JsonResponse
     {
         if ($error = $this->ensureRole($request, 'teacher')) {
@@ -1540,21 +1683,34 @@ class LearningHubController extends Controller
 
         $teacherId = (int) $request->user()->id;
 
+        $teacherAttempts = DB::table('quiz_attempts')
+            ->join('quizzes', 'quizzes.id', '=', 'quiz_attempts.quiz_id')
+            ->join('study_sets', 'study_sets.id', '=', 'quizzes.study_set_id')
+            ->where('study_sets.teacher_id', $teacherId)
+            ->select('quiz_attempts.student_id', 'quiz_attempts.score');
+
         $classPerformance = DB::table('classes')
             ->leftJoin('class_students', 'class_students.class_id', '=', 'classes.id')
-            ->leftJoin('quiz_attempts', 'quiz_attempts.student_id', '=', 'class_students.student_id')
+            ->leftJoinSub($teacherAttempts, 'teacher_attempts', function ($join) {
+                $join->on('teacher_attempts.student_id', '=', 'class_students.student_id');
+            })
             ->where('classes.teacher_id', $teacherId)
             ->groupBy('classes.id', 'classes.name', 'classes.subject')
-            ->selectRaw('classes.id, classes.name, classes.subject, COUNT(DISTINCT class_students.student_id) as students, COALESCE(AVG(quiz_attempts.score), 0) as averageScore')
+            ->selectRaw('classes.id, classes.name, classes.subject, COUNT(DISTINCT class_students.student_id) as students, COUNT(DISTINCT teacher_attempts.student_id) as submitted_students, COALESCE(AVG(teacher_attempts.score), 0) as averageScore')
             ->get()
-            ->map(fn ($row) => [
-                'classId' => (int) $row->id,
-                'className' => $row->name,
-                'subject' => $row->subject,
-                'students' => (int) $row->students,
-                'averageScore' => (int) round((float) $row->averageScore),
-                'completionRate' => min(100, (int) round(((float) $row->averageScore * 0.9))),
-            ])
+            ->map(function ($row) {
+                $students = (int) $row->students;
+                $submittedStudents = (int) $row->submitted_students;
+
+                return [
+                    'classId' => (int) $row->id,
+                    'className' => $row->name,
+                    'subject' => $row->subject,
+                    'students' => $students,
+                    'averageScore' => (int) round((float) $row->averageScore),
+                    'completionRate' => $students > 0 ? (int) round(($submittedStudents / $students) * 100) : 0,
+                ];
+            })
             ->values();
 
         $topicDifficulty = DB::table('quiz_questions')
@@ -1574,11 +1730,29 @@ class LearningHubController extends Controller
             ])
             ->values();
 
+        $overallAttempts = DB::table('quiz_attempts')
+            ->join('quizzes', 'quizzes.id', '=', 'quiz_attempts.quiz_id')
+            ->join('study_sets', 'study_sets.id', '=', 'quizzes.study_set_id')
+            ->where('study_sets.teacher_id', $teacherId)
+            ->selectRaw('COALESCE(AVG(quiz_attempts.score), 0) as average_score, COUNT(DISTINCT quiz_attempts.student_id) as submitted_students')
+            ->first();
+
+        $assignedStudents = DB::table('study_set_assignments')
+            ->join('study_sets', 'study_sets.id', '=', 'study_set_assignments.study_set_id')
+            ->where('study_sets.teacher_id', $teacherId)
+            ->distinct('study_set_assignments.student_id')
+            ->count('study_set_assignments.student_id');
+
+        $fallbackAverageScore = (int) round((float) ($overallAttempts->average_score ?? 0));
+        $fallbackCompletionRate = $assignedStudents > 0
+            ? (int) round((((int) ($overallAttempts->submitted_students ?? 0)) / $assignedStudents) * 100)
+            : 0;
+
         return response()->json([
             'classPerformance' => $classPerformance,
             'topicDifficulty' => $topicDifficulty,
-            'averageScore' => (int) round($classPerformance->avg('averageScore') ?? 0),
-            'completionRate' => (int) round($classPerformance->avg('completionRate') ?? 0),
+            'averageScore' => $classPerformance->isNotEmpty() ? (int) round($classPerformance->avg('averageScore') ?? 0) : $fallbackAverageScore,
+            'completionRate' => $classPerformance->isNotEmpty() ? (int) round($classPerformance->avg('completionRate') ?? 0) : $fallbackCompletionRate,
         ]);
     }
 
@@ -1632,6 +1806,63 @@ class LearningHubController extends Controller
         return response()->json(['message' => 'Class created.', 'classId' => $classId], 201);
     }
 
+    public function updateClass(Request $request, int $classId): JsonResponse
+    {
+        if ($error = $this->ensureRole($request, 'teacher')) {
+            return $error;
+        }
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'subject' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+        ]);
+
+        $ownsClass = DB::table('classes')
+            ->where('id', $classId)
+            ->where('teacher_id', $request->user()->id)
+            ->exists();
+
+        if (! $ownsClass) {
+            return response()->json(['message' => 'Class not found.'], 404);
+        }
+
+        DB::table('classes')
+            ->where('id', $classId)
+            ->update([
+                'name' => $validated['name'],
+                'subject' => $validated['subject'],
+                'description' => $validated['description'] ?? null,
+                'updated_at' => now(),
+            ]);
+
+        return response()->json(['message' => 'Class updated.']);
+    }
+
+    public function deleteClass(Request $request, int $classId): JsonResponse
+    {
+        if ($error = $this->ensureRole($request, 'teacher')) {
+            return $error;
+        }
+
+        $ownsClass = DB::table('classes')
+            ->where('id', $classId)
+            ->where('teacher_id', $request->user()->id)
+            ->exists();
+
+        if (! $ownsClass) {
+            return response()->json(['message' => 'Class not found.'], 404);
+        }
+
+        // Delete related class students first
+        DB::table('class_students')->where('class_id', $classId)->delete();
+
+        // Delete the class
+        DB::table('classes')->where('id', $classId)->delete();
+
+        return response()->json(['message' => 'Class deleted.']);
+    }
+
     public function addClassStudent(Request $request, int $classId): JsonResponse
     {
         if ($error = $this->ensureRole($request, 'teacher')) {
@@ -1641,6 +1872,15 @@ class LearningHubController extends Controller
         $validated = $request->validate([
             'studentId' => ['required', 'integer', 'exists:users,id'],
         ]);
+
+        $isStudent = DB::table('users')
+            ->where('id', $validated['studentId'])
+            ->where('role', 'student')
+            ->exists();
+
+        if (! $isStudent) {
+            return response()->json(['message' => 'Only student accounts can be added to a class.'], 422);
+        }
 
         $exists = DB::table('classes')->where('id', $classId)->where('teacher_id', $request->user()->id)->exists();
         if (! $exists) {
@@ -1661,6 +1901,11 @@ class LearningHubController extends Controller
             return $error;
         }
 
+        $ownsClass = DB::table('classes')->where('id', $classId)->where('teacher_id', $request->user()->id)->exists();
+        if (! $ownsClass) {
+            return response()->json(['message' => 'Class not found.'], 404);
+        }
+
         DB::table('class_students')
             ->where('class_id', $classId)
             ->where('student_id', $studentId)
@@ -1676,15 +1921,34 @@ class LearningHubController extends Controller
         }
 
         $guides = DB::table('study_guides')
-            ->where('teacher_id', $request->user()->id)
-            ->orderByDesc('updated_at')
-            ->get(['id', 'title', 'subject', 'content', 'image_url', 'updated_at'])
+            ->leftJoin('classes', 'study_guides.class_id', '=', 'classes.id')
+            ->where('study_guides.teacher_id', $request->user()->id)
+            ->orderByDesc('study_guides.updated_at')
+            ->select([
+                'study_guides.id', 
+                'study_guides.title', 
+                'study_guides.subject', 
+                'study_guides.content', 
+                'study_guides.image_url', 
+                'study_guides.visibility',
+                'study_guides.upload_type',
+                'study_guides.file_path',
+                'study_guides.class_id',
+                'study_guides.updated_at',
+                'classes.name as class_name'
+            ])
+            ->get()
             ->map(fn ($guide) => [
                 'id' => (int) $guide->id,
                 'title' => $guide->title,
                 'subject' => $guide->subject,
                 'content' => $guide->content,
                 'imageUrl' => $guide->image_url,
+                'visibility' => $guide->visibility,
+                'uploadType' => $guide->upload_type,
+                'filePath' => $guide->file_path ? '/storage/' . $guide->file_path : null,
+                'classId' => $guide->class_id,
+                'className' => $guide->class_name,
                 'updatedAt' => optional($guide->updated_at)?->diffForHumans() ?? 'just now',
             ])
             ->values();
@@ -1700,17 +1964,37 @@ class LearningHubController extends Controller
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
-            'subject' => ['nullable', 'string', 'max:255'],
-            'content' => ['required', 'string'],
-            'imageUrl' => ['nullable', 'string'],
+            'subject' => ['required', 'string', 'max:255'],
+            'classId' => ['required', 'integer', 'exists:classes,id'],
+            'visibility' => ['nullable', 'in:public,private'],
+            'uploadType' => ['required', 'in:pdf,powerpoint,text'],
+            'textContent' => ['required_if:uploadType,text', 'string'],
+            'file' => ['required_unless:uploadType,text', 'file', 'mimes:pdf,ppt,pptx', 'max:10240'],
         ]);
+
+        $filePath = null;
+        $content = '';
+
+        // Handle file upload
+        if ($validated['uploadType'] !== 'text' && $request->hasFile('file')) {
+            $file = $request->file('file');
+            $fileName = time() . '_' . $file->getClientOriginalName();
+            $filePath = $file->storeAs('lessons', $fileName, 'public');
+        } else {
+            // For text content
+            $content = $validated['textContent'] ?? '';
+        }
 
         $id = DB::table('study_guides')->insertGetId([
             'teacher_id' => $request->user()->id,
+            'class_id' => $validated['classId'],
             'title' => $validated['title'],
-            'subject' => $validated['subject'] ?? 'General',
-            'content' => $validated['content'],
-            'image_url' => $validated['imageUrl'] ?? null,
+            'subject' => $validated['subject'],
+            'visibility' => $validated['visibility'] ?? 'public',
+            'upload_type' => $validated['uploadType'],
+            'file_path' => $filePath,
+            'content' => $content,
+            'image_url' => null,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -1861,5 +2145,209 @@ class LearningHubController extends Controller
         }
 
         return response()->json(['message' => 'Announcement sent.']);
+    }
+
+    public function studentActivities(Request $request): JsonResponse
+    {
+        if ($error = $this->ensureRole($request, 'student')) {
+            return $error;
+        }
+
+        $studentId = $request->user()->id;
+
+        // Get activities assigned to this student through classes OR direct assignments
+        $activities = DB::table('study_sets')
+            ->leftJoin('classes', 'study_sets.class_id', '=', 'classes.id')
+            ->leftJoin('class_students', function($join) use ($studentId) {
+                $join->on('classes.id', '=', 'class_students.class_id')
+                     ->where('class_students.student_id', '=', $studentId);
+            })
+            ->leftJoin('study_set_assignments', function($join) use ($studentId) {
+                $join->on('study_sets.id', '=', 'study_set_assignments.study_set_id')
+                     ->where('study_set_assignments.student_id', '=', $studentId);
+            })
+            ->leftJoin('users as teachers', 'study_sets.teacher_id', '=', 'teachers.id')
+            ->where('study_sets.is_published', true)
+            ->where(function($query) {
+                $query->whereNotNull('class_students.student_id')
+                      ->orWhereNotNull('study_set_assignments.id');
+            })
+            ->select(
+                'study_sets.id',
+                'study_sets.title',
+                'study_sets.description',
+                'study_sets.subject',
+                'study_sets.schedule',
+                'study_sets.cards_count',
+                'study_sets.created_at',
+                'study_sets.updated_at',
+                'classes.name as class_name',
+                'teachers.name as teacher_name'
+            )
+            ->distinct()
+            ->orderByDesc('study_sets.created_at')
+            ->get()
+            ->map(function ($activity) use ($studentId) {
+                // Count flashcards
+                $flashcardsCount = (int) DB::table('flashcards')
+                    ->where('study_set_id', $activity->id)
+                    ->count();
+
+                // Count quiz questions
+                $quizQuestionsCount = (int) DB::table('quiz_questions')
+                    ->join('quizzes', 'quiz_questions.quiz_id', '=', 'quizzes.id')
+                    ->where('quizzes.study_set_id', $activity->id)
+                    ->count();
+
+                // Check if student has attempted this activity
+                $hasAttempted = DB::table('quiz_attempts')
+                    ->where('study_set_id', $activity->id)
+                    ->where('student_id', $studentId)
+                    ->exists();
+
+                return [
+                    'id' => (int) $activity->id,
+                    'title' => $activity->title,
+                    'description' => $activity->description,
+                    'subject' => $activity->subject,
+                    'schedule' => $activity->schedule,
+                    'className' => $activity->class_name,
+                    'teacherName' => $activity->teacher_name,
+                    'flashcardsCount' => $flashcardsCount,
+                    'quizQuestionsCount' => $quizQuestionsCount,
+                    'hasAttempted' => $hasAttempted,
+                    'createdAt' => $activity->created_at,
+                    'updatedAt' => $activity->updated_at,
+                ];
+            });
+
+        return response()->json(['activities' => $activities]);
+    }
+
+    public function debugStudentActivities(Request $request): JsonResponse
+    {
+        if ($error = $this->ensureRole($request, 'student')) {
+            return $error;
+        }
+
+        $studentId = $request->user()->id;
+
+        // Check student's classes
+        $studentClasses = DB::table('class_students')
+            ->join('classes', 'class_students.class_id', '=', 'classes.id')
+            ->where('class_students.student_id', $studentId)
+            ->select('classes.id', 'classes.name', 'classes.subject')
+            ->get();
+
+        // Check all published study sets
+        $allStudySets = DB::table('study_sets')
+            ->where('is_published', true)
+            ->select('id', 'title', 'class_id', 'teacher_id')
+            ->get();
+
+        // Check direct assignments
+        $directAssignments = DB::table('study_set_assignments')
+            ->where('student_id', $studentId)
+            ->get();
+
+        return response()->json([
+            'studentId' => $studentId,
+            'enrolledClasses' => $studentClasses,
+            'allPublishedStudySets' => $allStudySets,
+            'directAssignments' => $directAssignments,
+        ]);
+    }
+
+    public function getActivityDetails(Request $request, int $activityId): JsonResponse
+    {
+        if ($error = $this->ensureRole($request, 'student')) {
+            return $error;
+        }
+
+        $studentId = $request->user()->id;
+
+        // Check if student has access to this activity (through class or direct assignment)
+        $hasAccess = DB::table('study_sets')
+            ->leftJoin('classes', 'study_sets.class_id', '=', 'classes.id')
+            ->leftJoin('class_students', function($join) use ($studentId) {
+                $join->on('classes.id', '=', 'class_students.class_id')
+                     ->where('class_students.student_id', '=', $studentId);
+            })
+            ->leftJoin('study_set_assignments', function($join) use ($studentId) {
+                $join->on('study_sets.id', '=', 'study_set_assignments.study_set_id')
+                     ->where('study_set_assignments.student_id', '=', $studentId);
+            })
+            ->where('study_sets.id', $activityId)
+            ->where('study_sets.is_published', true)
+            ->where(function($query) {
+                $query->whereNotNull('class_students.student_id')
+                      ->orWhereNotNull('study_set_assignments.id');
+            })
+            ->exists();
+
+        if (!$hasAccess) {
+            return response()->json(['message' => 'Activity not found or access denied.'], 404);
+        }
+
+        $activity = DB::table('study_sets')->where('id', $activityId)->first();
+
+        // Get flashcards
+        $flashcards = DB::table('flashcards')
+            ->where('study_set_id', $activityId)
+            ->select('id', 'term', 'definition', 'image_url')
+            ->get()
+            ->map(function ($card) {
+                return [
+                    'id' => (int) $card->id,
+                    'term' => $card->term,
+                    'definition' => $card->definition,
+                    'imageUrl' => $card->image_url,
+                ];
+            });
+
+        // Get quiz questions
+        $quizQuestions = DB::table('quiz_questions')
+            ->join('quizzes', 'quiz_questions.quiz_id', '=', 'quizzes.id')
+            ->where('quizzes.study_set_id', $activityId)
+            ->select(
+                'quiz_questions.id',
+                'quiz_questions.question_type',
+                'quiz_questions.prompt',
+                'quiz_questions.choices',
+                'quiz_questions.correct_answer'
+            )
+            ->get()
+            ->map(function ($question) {
+                return [
+                    'id' => (int) $question->id,
+                    'type' => $question->question_type,
+                    'question' => $question->prompt,
+                    'options' => json_decode($question->choices, true) ?? [],
+                    'correctAnswer' => $question->correct_answer,
+                ];
+            });
+
+        // Check if student has completed this activity
+        $quizAttempt = DB::table('quiz_attempts')
+            ->join('quizzes', 'quiz_attempts.quiz_id', '=', 'quizzes.id')
+            ->where('quizzes.study_set_id', $activityId)
+            ->where('quiz_attempts.student_id', $studentId)
+            ->select('quiz_attempts.score', 'quiz_attempts.answers', 'quiz_attempts.completed_at')
+            ->orderByDesc('quiz_attempts.completed_at')
+            ->first();
+
+        $hasCompleted = $quizAttempt !== null;
+        $previousAnswers = $hasCompleted ? json_decode($quizAttempt->answers, true) : null;
+        $previousScore = $hasCompleted ? (int) $quizAttempt->score : null;
+
+        return response()->json([
+            'activity' => $activity,
+            'flashcards' => $flashcards,
+            'quizQuestions' => $quizQuestions,
+            'hasCompleted' => $hasCompleted,
+            'previousAnswers' => $previousAnswers,
+            'previousScore' => $previousScore,
+            'completedAt' => $quizAttempt ? $quizAttempt->completed_at : null,
+        ]);
     }
 }

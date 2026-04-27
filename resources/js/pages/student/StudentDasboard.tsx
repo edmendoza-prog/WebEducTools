@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { csrfFetch } from '../lib/csrf';
-import NotificationCenter from '../components/ui/NotificationCenter';
+import { csrfFetch } from '../../lib/csrf';
 import {
   BadgeGallery,
   GameFeedbackCard,
@@ -10,10 +9,11 @@ import {
   type GamifiedBadge,
   type LeaderboardEntry,
   type XpSnapshot,
-} from '../components/ui/GamificationWidgets';
+} from '../../components/ui/GamificationWidgets';
 import {
   Award,
   BarChart3,
+  Bell,
   BookOpen,
   Brain,
   Check,
@@ -24,12 +24,14 @@ import {
   Layers,
   LogOut,
   Medal,
+  Mail,
   RotateCcw,
-  Search,
   Shuffle,
-  Sparkles,
   Target,
   Trophy,
+  Settings,
+  Moon,
+  Trash2,
   Users,
   X,
 } from 'lucide-react';
@@ -39,6 +41,7 @@ type AuthMeResponse = {
   user?: {
     name?: string;
     email?: string;
+    profileImageUrl?: string | null;
   };
 };
 
@@ -80,19 +83,12 @@ type SubjectPerformance = {
   score: number;
 };
 
-type BadgeInfo = {
-  id: string;
-  title: string;
-  description: string;
-  progress: number;
-  required: number;
-  icon: React.ReactNode;
-};
-
 type NotificationItem = {
   id: string;
+  type?: string;
   title: string;
   message: string;
+  read?: boolean;
   createdAt?: string | null;
 };
 
@@ -113,81 +109,19 @@ type StudentNav = {
   icon: React.ReactNode;
 };
 
-const fallbackSets: StudySet[] = [
-  { id: 'set-1', title: 'Biology: Cell Structure', cards: 28, updatedAt: '1 hour ago', owner: 'Public Group' },
-  { id: 'set-2', title: 'Philippine Constitution Basics', cards: 42, updatedAt: 'Yesterday', owner: 'Teacher Ana' },
-  { id: 'set-3', title: 'Intro to Economics', cards: 31, updatedAt: '2 days ago', owner: 'Campus Community' },
-  { id: 'set-4', title: 'Algebra Transformations', cards: 19, updatedAt: '3 days ago', owner: 'Math Circle' },
-];
-
-const fallbackCards: FlashCard[] = [
-  { id: 'card-1', term: 'Mitochondria', definition: 'Organelle that generates ATP via cellular respiration.', subject: 'Biology' },
-  { id: 'card-2', term: 'Due Process', definition: 'Requirement that legal matters be resolved fairly under established rules.', subject: 'Civics' },
-  { id: 'card-3', term: 'Elasticity', definition: 'A measure of how much demand responds to a price change.', subject: 'Economics' },
-  { id: 'card-4', term: 'Distributive Property', definition: 'a(b + c) = ab + ac.', subject: 'Mathematics' },
-];
-
-const fallbackQuestions: QuizQuestion[] = [
-  {
-    id: 'q-1',
-    type: 'multiple_choice',
-    subject: 'Biology',
-    prompt: 'Which organelle is known as the powerhouse of the cell?',
-    choices: ['Nucleus', 'Ribosome', 'Mitochondria', 'Golgi Body'],
-    answer: 'Mitochondria',
-    explanation: 'Mitochondria produce ATP, the main energy source used by cells.',
-  },
-  {
-    id: 'q-2',
-    type: 'true_false',
-    subject: 'Economics',
-    prompt: 'Inflation always increases purchasing power.',
-    choices: ['True', 'False'],
-    answer: 'False',
-    explanation: 'Inflation usually decreases purchasing power when wages do not keep up.',
-  },
-  {
-    id: 'q-3',
-    type: 'identification',
-    subject: 'Mathematics',
-    prompt: 'Name the property used in a(b + c) = ab + ac.',
-    answer: 'Distributive Property',
-    explanation: 'The equation is the standard form of the distributive property.',
-  },
-];
+const fallbackSets: StudySet[] = [];
+const fallbackCards: FlashCard[] = [];
+const fallbackQuestions: QuizQuestion[] = [];
 
 const fallbackDashboard: DashboardData = {
-  progressPercent: 72,
-  completionRate: 64,
-  studyStreak: 9,
-  weeklyScores: [
-    { day: 'Mon', score: 78 },
-    { day: 'Tue', score: 82 },
-    { day: 'Wed', score: 86 },
-    { day: 'Thu', score: 79 },
-    { day: 'Fri', score: 90 },
-    { day: 'Sat', score: 92 },
-    { day: 'Sun', score: 88 },
-  ],
-  weeklyProgress: [
-    { week: 'W1', completed: 28 },
-    { week: 'W2', completed: 36 },
-    { week: 'W3', completed: 44 },
-    { week: 'W4', completed: 58 },
-  ],
+  progressPercent: 0,
+  completionRate: 0,
+  studyStreak: 0,
+  weeklyScores: [],
+  weeklyProgress: [],
   recentSets: fallbackSets,
-  sessionLogs: [
-    { id: 's-1', date: '2026-04-08', minutes: 45, topic: 'Biology', score: 88 },
-    { id: 's-2', date: '2026-04-09', minutes: 35, topic: 'Economics', score: 76 },
-    { id: 's-3', date: '2026-04-10', minutes: 55, topic: 'Mathematics', score: 91 },
-    { id: 's-4', date: '2026-04-11', minutes: 40, topic: 'Civics', score: 84 },
-  ],
-  subjectPerformance: [
-    { subject: 'Biology', score: 88 },
-    { subject: 'Mathematics', score: 91 },
-    { subject: 'Economics', score: 72 },
-    { subject: 'Civics', score: 84 },
-  ],
+  sessionLogs: [],
+  subjectPerformance: [],
 };
 
 const navItems: StudentNav[] = [
@@ -196,7 +130,6 @@ const navItems: StudentNav[] = [
   { label: 'Quiz', path: '/student-dashboard/quiz', icon: <HelpCircle size={18} /> },
   { label: 'Practice Test', path: '/student-dashboard/practice-tests', icon: <Clock3 size={18} /> },
   { label: 'Reports', path: '/student-dashboard/reports', icon: <BarChart3 size={18} /> },
-  { label: 'Achievements', path: '/student-dashboard/achievements', icon: <Medal size={18} /> },
   { label: 'Search & Collaboration', path: '/student-dashboard/library', icon: <Users size={18} /> },
 ];
 
@@ -245,17 +178,13 @@ export default function StudentDasboard() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [profileName, setProfileName] = useState('Student Learner');
-  const [profileEmail, setProfileEmail] = useState('student@example.com');
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [globalSearch, setGlobalSearch] = useState('');
-
   const [dashboard, setDashboard] = useState<DashboardData>(fallbackDashboard);
   const [flashcards, setFlashcards] = useState<FlashCard[]>(fallbackCards);
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>(fallbackQuestions);
   const [quizId, setQuizId] = useState<number | null>(null);
+  const [quizCompleted, setQuizCompleted] = useState(false);
   const [studentNotifications, setStudentNotifications] = useState<NotificationItem[]>([]);
-  const [remoteBadges, setRemoteBadges] = useState<BadgeInfo[] | null>(null);
+  const [remoteBadges, setRemoteBadges] = useState<Array<{ id: string; title: string; description: string; progress: number; required: number; icon: React.ReactNode }> | null>(null);
   const [xpSnapshot, setXpSnapshot] = useState<XpSnapshot | null>(null);
   const [leaderboardScope, setLeaderboardScope] = useState<'weekly' | 'global'>('weekly');
   const [leaders, setLeaders] = useState<LeaderboardEntry[]>([]);
@@ -283,6 +212,25 @@ export default function StudentDasboard() {
 
   const [newBadgeIds, setNewBadgeIds] = useState<string[]>([]);
 
+  // Profile & UI state
+  const [profileName, setProfileName] = useState('');
+  const [profileEmail, setProfileEmail] = useState('');
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isMailMenuOpen, setIsMailMenuOpen] = useState(false);
+  const [isNotificationsMenuOpen, setIsNotificationsMenuOpen] = useState(false);
+  const [activeMailItem, setActiveMailItem] = useState<NotificationItem | null>(null);
+  const [draftProfileImagePreview, setDraftProfileImagePreview] = useState('');
+  const [draftProfileImageFile, setDraftProfileImageFile] = useState<File | null>(null);
+  const [profileError, setProfileError] = useState('');
+  const [isProfileSaving, setIsProfileSaving] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [globalSearch, setGlobalSearch] = useState('');
+  const [isMailDeleting, setIsMailDeleting] = useState(false);
+  const [mailDeletingItemId, setMailDeletingItemId] = useState<string | null>(null);
+
   const timerRef = useRef<number | null>(null);
   const profileInitials = profileName
     .split(' ')
@@ -290,6 +238,73 @@ export default function StudentDasboard() {
     .slice(0, 2)
     .map((name) => name[0]?.toUpperCase() ?? '')
     .join('') || 'SL';
+
+  useEffect(() => {
+    document.body.classList.toggle('is-student-dark-mode', isDarkMode);
+
+    return () => {
+      document.body.classList.remove('is-student-dark-mode');
+    };
+  }, [isDarkMode]);
+
+  useEffect(() => {
+    if (!isProfileMenuOpen && !isMailMenuOpen && !isNotificationsMenuOpen) {
+      return undefined;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('.ss-user-menu-anchor')) {
+        return;
+      }
+
+      setIsProfileMenuOpen(false);
+      setIsMailMenuOpen(false);
+      setIsNotificationsMenuOpen(false);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsProfileMenuOpen(false);
+        setIsMailMenuOpen(false);
+        setIsNotificationsMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isMailMenuOpen, isNotificationsMenuOpen, isProfileMenuOpen]);
+
+  useEffect(() => {
+    if (!activeMailItem) {
+      return undefined;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setActiveMailItem(null);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [activeMailItem]);
+
+  useEffect(() => {
+    if (!draftProfileImagePreview.startsWith('blob:')) {
+      return undefined;
+    }
+
+    return () => URL.revokeObjectURL(draftProfileImagePreview);
+  }, [draftProfileImagePreview]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -314,6 +329,8 @@ export default function StudentDasboard() {
           if (me.user?.email) {
             setProfileEmail(me.user.email);
           }
+
+          setProfileImageUrl(me.user?.profileImageUrl ?? null);
         }
 
         if (dashboardRes.ok) {
@@ -323,19 +340,19 @@ export default function StudentDasboard() {
 
         if (flashcardRes.ok) {
           const payload = (await flashcardRes.json()) as { cards?: FlashCard[] };
-          if (payload.cards?.length) {
-            setFlashcards(payload.cards);
-          }
+          setFlashcards(payload.cards ?? []);
         }
 
         if (quizRes.ok) {
-          const payload = (await quizRes.json()) as { quizId?: number; questions?: QuizQuestion[] };
+          const payload = (await quizRes.json()) as { quizId?: number | null; questions?: QuizQuestion[]; completed?: boolean };
           if (payload.quizId) {
             setQuizId(payload.quizId);
+            setQuizCompleted(false);
+          } else {
+            setQuizId(null);
+            setQuizCompleted(payload.completed ?? true);
           }
-          if (payload.questions?.length) {
-            setQuizQuestions(payload.questions);
-          }
+          setQuizQuestions(payload.questions ?? []);
         }
 
         if (notificationsRes.ok) {
@@ -535,42 +552,34 @@ export default function StudentDasboard() {
     return Math.round((correct / practiceQuestions.length) * 100);
   }, [practiceAnswers, practiceQuestions]);
 
-  const localBadgeProgress: BadgeInfo[] = [
-    {
-      id: 'flashcard-master',
-      title: 'Flashcard Master',
-      description: 'Mark 20 cards as known.',
-      progress: knownCards.length,
-      required: 20,
-      icon: <BookOpen size={16} />,
-    },
-    {
-      id: 'quiz-champion',
-      title: 'Quiz Champion',
-      description: 'Reach 85% quiz score.',
-      progress: quizScore,
-      required: 85,
-      icon: <Trophy size={16} />,
-    },
-    {
-      id: 'study-streak',
-      title: 'Study Streak',
-      description: 'Maintain a 7-day streak.',
-      progress: dashboard.studyStreak,
-      required: 7,
-      icon: <Flame size={16} />,
-    },
-    {
-      id: 'perfect-score',
-      title: 'Perfect Score',
-      description: 'Get 100% in a practice test.',
-      progress: practiceScore,
-      required: 100,
-      icon: <Target size={16} />,
-    },
-  ];
+  const badgeProgress = remoteBadges ?? [];
 
-  const badgeProgress = remoteBadges && remoteBadges.length > 0 ? remoteBadges : localBadgeProgress;
+  const teacherAnnouncements = useMemo(
+    () => studentNotifications.filter((item) => item.type === 'announcement'),
+    [studentNotifications],
+  );
+
+  const unreadTeacherAnnouncementsCount = useMemo(
+    () => teacherAnnouncements.filter((item) => !item.read).length,
+    [teacherAnnouncements],
+  );
+
+  const quizUploadNotifications = useMemo(
+    () =>
+      studentNotifications.filter((item) => {
+        if (item.type !== 'assignment') {
+          return false;
+        }
+
+        return /quiz/i.test(`${item.title} ${item.message}`);
+      }),
+    [studentNotifications],
+  );
+
+  const unreadQuizUploadNotificationsCount = useMemo(
+    () => quizUploadNotifications.filter((item) => !item.read).length,
+    [quizUploadNotifications],
+  );
 
   const weakSubjects = dashboard.subjectPerformance.filter((item) => item.score < 75);
   const strongSubjects = dashboard.subjectPerformance.filter((item) => item.score >= 85);
@@ -590,10 +599,179 @@ export default function StudentDasboard() {
       if (!response.ok) {
         throw new Error('Logout failed.');
       }
-
-      navigate('/login/student');
     } catch {
       setIsLoggingOut(false);
+      return;
+    }
+
+    window.location.replace('/login/student');
+  };
+
+  const openProfileModal = () => {
+    setDraftProfileImageFile(null);
+    setDraftProfileImagePreview(profileImageUrl ?? '');
+    setProfileError('');
+    setIsMailMenuOpen(false);
+    setIsNotificationsMenuOpen(false);
+    setIsProfileMenuOpen((current) => !current);
+  };
+
+  const openMailMenu = () => {
+    setIsProfileMenuOpen(false);
+    setIsNotificationsMenuOpen(false);
+    setIsMailMenuOpen((current) => !current);
+  };
+
+  const openNotificationsMenu = () => {
+    setIsProfileMenuOpen(false);
+    setIsMailMenuOpen(false);
+    setIsNotificationsMenuOpen((current) => !current);
+  };
+
+  const formatNotificationTime = (createdAt?: string | null): string => {
+    if (!createdAt) {
+      return 'Just now';
+    }
+
+    const date = new Date(createdAt);
+    if (Number.isNaN(date.getTime())) {
+      return 'Just now';
+    }
+
+    return date.toLocaleString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  };
+
+  const markMailAsRead = async () => {
+    if (unreadTeacherAnnouncementsCount === 0) {
+      return;
+    }
+
+    try {
+      const response = await csrfFetch('/api/student/notifications/read-all', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ type: 'announcement' }),
+      });
+
+      if (!response.ok) {
+        return;
+      }
+
+      setStudentNotifications((current) =>
+        current.map((item) => (item.type === 'announcement' ? { ...item, read: true } : item)),
+      );
+    } catch {
+      // Keep current state if the notification update request fails.
+    }
+  };
+
+  const openMailMessage = (item: NotificationItem) => {
+    setIsMailMenuOpen(false);
+    setActiveMailItem(item);
+  };
+
+  const closeMailMessage = () => {
+    if (isMailDeleting) {
+      return;
+    }
+
+    setActiveMailItem(null);
+  };
+
+  const mailSenderName = profileName ? `${profileName.split(' ')[0]}'s Teacher` : 'Your Teacher';
+
+  const deleteMailById = async (notificationId: string, closeModalAfterDelete = false) => {
+    if (mailDeletingItemId || (closeModalAfterDelete && isMailDeleting)) {
+      return;
+    }
+
+    setMailDeletingItemId(notificationId);
+    if (closeModalAfterDelete) {
+      setIsMailDeleting(true);
+    }
+
+    try {
+      const response = await csrfFetch(`/api/student/notifications/${notificationId}`, {
+        method: 'DELETE',
+        headers: { Accept: 'application/json' },
+      });
+
+      if (!response.ok) {
+        return;
+      }
+
+      setStudentNotifications((current) => current.filter((item) => item.id !== notificationId));
+      if (activeMailItem?.id === notificationId) {
+        setActiveMailItem(null);
+      }
+    } catch {
+      // Keep current UI state when delete request fails.
+    } finally {
+      setMailDeletingItemId(null);
+      if (closeModalAfterDelete) {
+        setIsMailDeleting(false);
+      }
+    }
+  };
+
+  const deleteMailMessage = async () => {
+    if (!activeMailItem || isMailDeleting) {
+      return;
+    }
+
+    await deleteMailById(activeMailItem.id, true);
+  };
+
+  const openProfileSettings = () => {
+    setIsProfileMenuOpen(false);
+    navigate('/student-dashboard/settings');
+  };
+
+  const closeProfileModal = () => {
+    if (draftProfileImagePreview.startsWith('blob:')) {
+      URL.revokeObjectURL(draftProfileImagePreview);
+    }
+
+    setDraftProfileImageFile(null);
+    setDraftProfileImagePreview('');
+    setIsProfileMenuOpen(false);
+    setIsProfileModalOpen(false);
+  };
+
+  const saveProfileImage = async () => {
+    setIsProfileSaving(true);
+    setProfileError('');
+
+    try {
+      const formData = new FormData();
+
+      if (draftProfileImageFile) {
+        formData.append('profileImage', draftProfileImageFile);
+      }
+
+      const response = await csrfFetch('/auth/profile', {
+        method: 'PATCH',
+        headers: { Accept: 'application/json' },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        setProfileError('Unable to save profile image right now.');
+        return;
+      }
+
+      const payload = (await response.json()) as AuthMeResponse;
+      setProfileImageUrl(payload.user?.profileImageUrl ?? (draftProfileImagePreview || null));
+      closeProfileModal();
+    } catch {
+      setProfileError('Unable to save profile image right now.');
+    } finally {
+      setIsProfileSaving(false);
     }
   };
 
@@ -703,17 +881,31 @@ export default function StudentDasboard() {
   };
 
   const nextQuizQuestion = async () => {
+    if (!quizQuestions.length) {
+      return;
+    }
+
     const isLastQuestion = quizIndex === quizQuestions.length - 1;
-    if (isLastQuestion && Object.keys(quizSelections).length > 0) {
+    if (isLastQuestion) {
       await submitQuizAttempt();
     }
 
     setShowFeedback(false);
     setQuizInput('');
-    setQuizIndex((index) => (index + 1) % quizQuestions.length);
+
+    if (isLastQuestion) {
+      setQuizCompleted(true);
+      return;
+    }
+
+    setQuizIndex((index) => index + 1);
   };
 
   const startPracticeTest = () => {
+    if (!quizQuestions.length) {
+      return;
+    }
+
     const randomized = randomizeQuestions(quizQuestions);
     setPracticeQuestions(randomized);
     setPracticeAnswers({});
@@ -781,34 +973,6 @@ export default function StudentDasboard() {
 
       <section className="ss-panel">
         <div className="ss-panel-head">
-          <h2>Recent Study Sets</h2>
-          <Sparkles size={16} />
-        </div>
-        <div className="ss-card-list">
-          {dashboard.recentSets.map((set) => (
-            <article key={set.id} className="ss-list-card">
-              <div>
-                <h3>{set.title}</h3>
-                <p>
-                  {set.cards} cards · {set.owner}
-                </p>
-              </div>
-              <span>{set.updatedAt}</span>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="ss-panel">
-        <NotificationCenter
-          title="Live Notifications"
-          items={studentNotifications}
-          emptyText="No notifications yet."
-        />
-      </section>
-
-      <section className="ss-panel">
-        <div className="ss-panel-head">
           <h2>Score Trend</h2>
           <BarChart3 size={16} />
         </div>
@@ -819,7 +983,7 @@ export default function StudentDasboard() {
               <XAxis dataKey="day" />
               <YAxis domain={[0, 100]} />
               <Tooltip />
-              <Line type="monotone" dataKey="score" stroke="#0e7490" strokeWidth={3} dot={{ r: 4 }} />
+              <Line type="monotone" dataKey="score" stroke="#2563eb" strokeWidth={3} dot={{ r: 4 }} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -837,7 +1001,7 @@ export default function StudentDasboard() {
               <XAxis dataKey="week" />
               <YAxis />
               <Tooltip />
-              <Bar dataKey="completed" fill="#f97316" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="completed" fill="#3b82f6" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -860,26 +1024,32 @@ export default function StudentDasboard() {
           </div>
         </div>
 
-        <button type="button" className={`ss-flip-card ${flipped ? 'is-flipped' : ''}`} onClick={() => setFlipped((prev) => !prev)}>
-          <div className="ss-flip-face ss-flip-front">
-            <small>{currentCard?.subject}</small>
-            <h3>{currentCard?.term ?? 'No card available'}</h3>
-            <p>Tap to reveal</p>
-          </div>
-          <div className="ss-flip-face ss-flip-back">
-            <small>Definition</small>
-            <h3>{currentCard?.definition ?? 'No definition available'}</h3>
-          </div>
-        </button>
+        {flashcards.length === 0 ? (
+          <p className="ss-empty">No flashcards available yet.</p>
+        ) : (
+          <>
+            <button type="button" className={`ss-flip-card ${flipped ? 'is-flipped' : ''}`} onClick={() => setFlipped((prev) => !prev)}>
+              <div className="ss-flip-face ss-flip-front">
+                <small>{currentCard?.subject}</small>
+                <h3>{currentCard?.term ?? 'No card available'}</h3>
+                <p>Tap to reveal</p>
+              </div>
+              <div className="ss-flip-face ss-flip-back">
+                <small>Definition</small>
+                <h3>{currentCard?.definition ?? 'No definition available'}</h3>
+              </div>
+            </button>
 
-        <div className="ss-inline-actions">
-          <button type="button" className="ss-danger-btn" onClick={() => markCard('review')}>
-            <X size={16} /> Needs Review
-          </button>
-          <button type="button" className="ss-success-btn" onClick={() => markCard('known')}>
-            <Check size={16} /> Known
-          </button>
-        </div>
+            <div className="ss-inline-actions">
+              <button type="button" className="ss-danger-btn" onClick={() => markCard('review')}>
+                <X size={16} /> Needs Review
+              </button>
+              <button type="button" className="ss-success-btn" onClick={() => markCard('known')}>
+                <Check size={16} /> Known
+              </button>
+            </div>
+          </>
+        )}
       </section>
 
       <section className="ss-panel">
@@ -918,8 +1088,40 @@ export default function StudentDasboard() {
   );
 
   const renderQuiz = () => {
+    if (quizCompleted && quizQuestions.length === 0) {
+      return (
+        <section className="ss-panel">
+          <div className="ss-panel-head">
+            <h2>Quiz System</h2>
+            <HelpCircle size={16} />
+          </div>
+          <p className="ss-empty">All assigned quizzes are completed.</p>
+        </section>
+      );
+    }
+
+    if (quizCompleted) {
+      return (
+        <section className="ss-panel">
+          <div className="ss-panel-head">
+            <h2>Quiz System</h2>
+            <HelpCircle size={16} />
+          </div>
+          <p className="ss-empty">Quiz completed. Wait for new content from your teacher.</p>
+        </section>
+      );
+    }
+
     if (!currentQuiz) {
-      return null;
+      return (
+        <section className="ss-panel">
+          <div className="ss-panel-head">
+            <h2>Quiz System</h2>
+            <HelpCircle size={16} />
+          </div>
+          <p className="ss-empty">No quiz questions available yet.</p>
+        </section>
+      );
     }
 
     const currentAnswer = quizSelections[currentQuiz.id] ?? '';
@@ -1017,8 +1219,12 @@ export default function StudentDasboard() {
             <h2>Practice Test Mode</h2>
             <Clock3 size={16} />
           </div>
-          <p className="ss-insight">Timed mode with randomized questions and a final score report.</p>
-          <button type="button" className="ss-chip-btn" onClick={startPracticeTest}>
+          <p className="ss-insight">
+            {quizQuestions.length > 0
+              ? 'Timed mode with randomized questions and a final score report.'
+              : 'No practice questions available yet.'}
+          </p>
+          <button type="button" className="ss-chip-btn" onClick={startPracticeTest} disabled={quizQuestions.length === 0}>
             Start Practice Test
           </button>
         </section>
@@ -1112,18 +1318,24 @@ export default function StudentDasboard() {
           <h2>Reports & Analytics</h2>
           <BarChart3 size={16} />
         </div>
-        <p className="ss-insight">Performance insights based on your study logs and quiz outcomes.</p>
-        <div className="ss-chart-wrap">
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={dashboard.subjectPerformance}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="subject" />
-              <YAxis domain={[0, 100]} />
-              <Tooltip />
-              <Bar dataKey="score" fill="#0891b2" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        {dashboard.subjectPerformance.length === 0 ? (
+          <p className="ss-empty">No report data yet.</p>
+        ) : (
+          <>
+            <p className="ss-insight">Performance insights based on your study logs and quiz outcomes.</p>
+            <div className="ss-chart-wrap">
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={dashboard.subjectPerformance}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="subject" />
+                  <YAxis domain={[0, 100]} />
+                  <Tooltip />
+                  <Bar dataKey="score" fill="#2563eb" radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </>
+        )}
       </section>
 
       <section className="ss-panel">
@@ -1132,17 +1344,21 @@ export default function StudentDasboard() {
           <Clock3 size={16} />
         </div>
         <div className="ss-card-list">
-          {dashboard.sessionLogs.map((session) => (
-            <article key={session.id} className="ss-list-card">
-              <div>
-                <h3>{session.topic}</h3>
-                <p>
-                  {session.date} · {session.minutes} mins
-                </p>
-              </div>
-              <span>{session.score}%</span>
-            </article>
-          ))}
+          {dashboard.sessionLogs.length === 0 ? (
+            <p className="ss-empty">No study history yet.</p>
+          ) : (
+            dashboard.sessionLogs.map((session) => (
+              <article key={session.id} className="ss-list-card">
+                <div>
+                  <h3>{session.topic}</h3>
+                  <p>
+                    {session.date} · {session.minutes} mins
+                  </p>
+                </div>
+                <span>{session.score}%</span>
+              </article>
+            ))
+          )}
         </div>
       </section>
 
@@ -1151,10 +1367,16 @@ export default function StudentDasboard() {
           <h2>Strengths & Weaknesses</h2>
           <Brain size={16} />
         </div>
-        <h3 className="ss-sub-title">Strong Subjects</h3>
-        <p className="ss-insight">{strongSubjects.map((item) => item.subject).join(', ') || 'Keep practicing to discover strengths.'}</p>
-        <h3 className="ss-sub-title">Needs Focus</h3>
-        <p className="ss-insight">{weakSubjects.map((item) => item.subject).join(', ') || 'No weak subjects right now.'}</p>
+        {dashboard.subjectPerformance.length === 0 ? (
+          <p className="ss-empty">No strengths or weaknesses data yet.</p>
+        ) : (
+          <>
+            <h3 className="ss-sub-title">Strong Subjects</h3>
+            <p className="ss-insight">{strongSubjects.map((item) => item.subject).join(', ') || 'Keep practicing to discover strengths.'}</p>
+            <h3 className="ss-sub-title">Needs Focus</h3>
+            <p className="ss-insight">{weakSubjects.map((item) => item.subject).join(', ') || 'No weak subjects right now.'}</p>
+          </>
+        )}
       </section>
     </div>
   );
@@ -1166,25 +1388,29 @@ export default function StudentDasboard() {
         <Medal size={16} />
       </div>
       <div className="ss-card-list">
-        {badgeProgress.map((badge) => {
-          const earned = badge.progress >= badge.required;
-          return (
-            <article key={badge.id} className={`ss-list-card ${earned ? 'is-earned' : ''}`}>
-              <div>
-                <h3>
-                  {badge.icon} {badge.title}
-                </h3>
-                <p>{badge.description}</p>
-                <div className="ss-meter">
-                  <span style={{ width: `${Math.min((badge.progress / badge.required) * 100, 100)}%` }} />
+        {badgeProgress.length === 0 ? (
+          <p className="ss-empty">No achievements yet.</p>
+        ) : (
+          badgeProgress.map((badge) => {
+            const earned = badge.progress >= badge.required;
+            return (
+              <article key={badge.id} className={`ss-list-card ${earned ? 'is-earned' : ''}`}>
+                <div>
+                  <h3>
+                    {badge.icon} {badge.title}
+                  </h3>
+                  <p>{badge.description}</p>
+                  <div className="ss-meter">
+                    <span style={{ width: `${Math.min((badge.progress / badge.required) * 100, 100)}%` }} />
+                  </div>
                 </div>
-              </div>
-              <span>
-                {badge.progress}/{badge.required}
-              </span>
-            </article>
-          );
-        })}
+                <span>
+                  {badge.progress}/{badge.required}
+                </span>
+              </article>
+            );
+          })
+        )}
       </div>
 
       {gamifiedBadges.length > 0 && <BadgeGallery badges={gamifiedBadges} />}
@@ -1206,20 +1432,28 @@ export default function StudentDasboard() {
       </div>
       <p className="ss-insight">Search study sets, browse public materials, and access shared content from your groups.</p>
 
-      <LeaderboardTable leaders={leaders} myRank={myRank} scope={leaderboardScope} onScope={setLeaderboardScope} />
+      {leaders.length === 0 ? (
+        <p className="ss-empty">No leaderboard data yet.</p>
+      ) : (
+        <LeaderboardTable leaders={leaders} myRank={myRank} scope={leaderboardScope} onScope={setLeaderboardScope} />
+      )}
 
       <div className="ss-card-list">
-        {filteredSets.map((set) => (
-          <article key={set.id} className="ss-list-card">
-            <div>
-              <h3>{set.title}</h3>
-              <p>
-                {set.cards} cards · shared by {set.owner}
-              </p>
-            </div>
-            <span>{set.updatedAt}</span>
-          </article>
-        ))}
+        {filteredSets.length === 0 ? (
+          <p className="ss-empty">No shared study sets yet.</p>
+        ) : (
+          filteredSets.map((set) => (
+            <article key={set.id} className="ss-list-card">
+              <div>
+                <h3>{set.title}</h3>
+                <p>
+                  {set.cards} cards · shared by {set.owner}
+                </p>
+              </div>
+              <span>{set.updatedAt}</span>
+            </article>
+          ))
+        )}
       </div>
     </section>
   );
@@ -1273,32 +1507,260 @@ export default function StudentDasboard() {
 
       <main className="ss-main">
         <header className="ss-topbar">
-          <div className="ss-search">
-            <Search size={16} />
-            <input
-              placeholder="Search study sets, topics, and collaborators"
-              value={globalSearch}
-              onChange={(event) => setGlobalSearch(event.target.value)}
-            />
+          <div className="ss-header-copy">
+            <h1>Student Dashboard</h1>
+            <p>Continue learning and track your progress.</p>
           </div>
 
           <div className="ss-user-actions">
-            <div className="ss-user-chip">
-              <span>{profileInitials}</span>
-              <div>
-                <p>{profileName}</p>
-                <small>{profileEmail}</small>
-              </div>
+            <div className="ss-user-menu-anchor">
+              <button type="button" className="ss-quick-action" onClick={openMailMenu} aria-label="Open teacher announcements">
+                <Mail size={14} />
+                {unreadTeacherAnnouncementsCount > 0 && <span className="ss-quick-action-badge">{unreadTeacherAnnouncementsCount}</span>}
+              </button>
+
+              {isMailMenuOpen && (
+                <section className="ss-topbar-menu" role="menu" aria-label="Teacher announcements" onClick={(event) => event.stopPropagation()}>
+                  <header className="ss-topbar-menu-head">
+                    <strong>Mail</strong>
+                    <span>Teacher Announcements</span>
+                  </header>
+
+                  <div className="ss-topbar-menu-list">
+                    {teacherAnnouncements.length === 0 ? (
+                      <p className="ss-topbar-menu-empty">No announcements yet.</p>
+                    ) : (
+                      teacherAnnouncements.map((item) => (
+                        <article key={item.id} className={`ss-topbar-menu-item ss-topbar-mail-item ${item.read ? 'is-read' : ''}`}>
+                          <button
+                            type="button"
+                            className="ss-topbar-mail-open"
+                            onClick={() => openMailMessage(item)}
+                          >
+                            <h4>{item.title}</h4>
+                            <p>{item.message}</p>
+                            <small>{formatNotificationTime(item.createdAt)}</small>
+                          </button>
+
+                          <button
+                            type="button"
+                            className="ss-topbar-mail-delete-icon"
+                            onClick={() => void deleteMailById(item.id)}
+                            aria-label="Delete mail message"
+                            disabled={isMailDeleting || mailDeletingItemId === item.id}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </article>
+                      ))
+                    )}
+                  </div>
+
+                  <div className="ss-topbar-menu-footer">
+                    <button
+                      type="button"
+                      className="ss-topbar-menu-action"
+                      onClick={markMailAsRead}
+                      disabled={unreadTeacherAnnouncementsCount === 0}
+                    >
+                      Mark All as Read
+                    </button>
+                  </div>
+                </section>
+              )}
             </div>
-            <button type="button" className="ss-chip-btn" onClick={handleLogout}>
-              <LogOut size={14} />
-              {isLoggingOut ? 'Signing out...' : 'Sign out'}
-            </button>
+
+            <div className="ss-user-menu-anchor">
+              <button type="button" className="ss-quick-action" onClick={openNotificationsMenu} aria-label="Open quiz notifications">
+                <Bell size={14} />
+                {unreadQuizUploadNotificationsCount > 0 && <span className="ss-quick-action-badge">{unreadQuizUploadNotificationsCount}</span>}
+              </button>
+
+              {isNotificationsMenuOpen && (
+                <section className="ss-topbar-menu" role="menu" aria-label="Quiz upload notifications" onClick={(event) => event.stopPropagation()}>
+                  <header className="ss-topbar-menu-head">
+                    <strong>Notifications</strong>
+                    <span>Quiz Upload Alerts</span>
+                  </header>
+
+                  <div className="ss-topbar-menu-list">
+                    {quizUploadNotifications.length === 0 ? (
+                      <p className="ss-topbar-menu-empty">No quiz upload notifications yet.</p>
+                    ) : (
+                      quizUploadNotifications.map((item) => (
+                        <article key={item.id} className={`ss-topbar-menu-item ${item.read ? 'is-read' : ''}`}>
+                          <h4>{item.title}</h4>
+                          <p>{item.message}</p>
+                          <small>{formatNotificationTime(item.createdAt)}</small>
+                        </article>
+                      ))
+                    )}
+                  </div>
+                </section>
+              )}
+            </div>
+            <div className="ss-user-menu-anchor">
+              <button type="button" className="ss-user-chip ss-user-chip-button ss-user-chip-avatar" onClick={openProfileModal} aria-label="Open student profile">
+                {profileImageUrl ? <img className="ss-user-avatar-image" src={profileImageUrl} alt="Student profile" /> : <span>{profileInitials}</span>}
+              </button>
+
+              {isProfileMenuOpen && (
+                <section className="ss-profile-menu" role="menu" aria-label="Student profile menu" onClick={(event) => event.stopPropagation()}>
+                  <div className="ss-profile-menu-head">
+                    <div className="ss-profile-menu-avatar">
+                      {profileImageUrl ? <img className="ss-user-avatar-image" src={profileImageUrl} alt="Student profile" /> : <span>{profileInitials}</span>}
+                    </div>
+                    <div className="ss-profile-menu-copy">
+                      <strong>{profileName}</strong>
+                      <span>{profileEmail}</span>
+                    </div>
+                  </div>
+
+                  <div className="ss-profile-menu-divider" />
+
+                  <button type="button" className="ss-profile-menu-item is-active" onClick={() => {
+                    setIsProfileMenuOpen(false);
+                    setDraftProfileImageFile(null);
+                    setDraftProfileImagePreview(profileImageUrl ?? '');
+                    setProfileError('');
+                    setIsProfileModalOpen(true);
+                  }}>
+                    <Settings size={18} />
+                    <span>Edit Profile Photo</span>
+                  </button>
+
+                  <button type="button" className="ss-profile-menu-item" onClick={openProfileSettings}>
+                    <Settings size={18} />
+                    <span>Settings</span>
+                  </button>
+
+                  <button type="button" className="ss-profile-menu-item" onClick={() => setIsDarkMode((current) => !current)}>
+                    <Moon size={18} />
+                    <span>Dark mode</span>
+                    <span className={`ss-toggle-pill ${isDarkMode ? 'is-on' : ''}`} aria-hidden="true">
+                      <span />
+                    </span>
+                  </button>
+
+                  <div className="ss-profile-menu-divider" />
+
+                  <button
+                    type="button"
+                    className="ss-profile-menu-logout"
+                    onClick={() => {
+                      setIsProfileMenuOpen(false);
+                      handleLogout();
+                    }}
+                    disabled={isLoggingOut}
+                  >
+                    <LogOut size={18} />
+                    <span>{isLoggingOut ? 'Logging out...' : 'Sign out'}</span>
+                  </button>
+                </section>
+              )}
+            </div>
           </div>
         </header>
 
         <section className="dashboard-page-transition">{renderCurrentPage()}</section>
+
+        {activeMailItem && (
+          <div className="ss-mail-overlay" role="presentation" onClick={closeMailMessage}>
+            <section className="ss-mail-modal" role="dialog" aria-modal="true" aria-labelledby="student-mail-title" onClick={(event) => event.stopPropagation()}>
+              <div className="ss-mail-modal-head">
+                <p className="ss-mail-modal-kicker">Message from {mailSenderName}</p>
+                <button className="ss-icon-btn" type="button" aria-label="Close mail message" onClick={closeMailMessage}>
+                  <X size={18} />
+                </button>
+              </div>
+
+              <h2 id="student-mail-title" className="ss-mail-modal-title">{activeMailItem.title}</h2>
+
+              <div className="ss-mail-modal-meta">
+                <div className="ss-mail-modal-row">
+                  <span className="ss-mail-modal-label">From</span>
+                  <p className="ss-mail-modal-value">
+                    <strong>{mailSenderName}</strong>
+                    <span>{formatNotificationTime(activeMailItem.createdAt)}</span>
+                  </p>
+                </div>
+                <div className="ss-mail-modal-row">
+                  <span className="ss-mail-modal-label">To</span>
+                  <p className="ss-mail-modal-value">
+                    <strong>{profileName}</strong>
+                    <span>Student recipient</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="ss-mail-modal-divider" />
+
+              <div className="ss-mail-modal-body">
+                <p>{activeMailItem.message}</p>
+              </div>
+
+              <div className="ss-mail-modal-actions">
+                <button
+                  type="button"
+                  className="ss-mail-delete-icon-btn"
+                  onClick={deleteMailMessage}
+                  aria-label="Delete mail message"
+                  disabled={isMailDeleting}
+                >
+                  <Trash2 size={15} />
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
+
+        {isProfileModalOpen && (
+          <div className="ss-profile-overlay" role="presentation" onClick={closeProfileModal}>
+            <section className="ss-profile-modal" role="dialog" aria-modal="true" aria-labelledby="student-profile-image-title" onClick={(event) => event.stopPropagation()}>
+              <div className="ss-profile-modal-head">
+                <h2 id="student-profile-image-title">Update Profile Image</h2>
+                <button className="ss-icon-btn" type="button" aria-label="Close profile image form" onClick={closeProfileModal}>
+                  <X size={16} />
+                </button>
+              </div>
+
+              <label className="ss-profile-modal-field">
+                Profile Image
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null;
+
+                    if (draftProfileImagePreview.startsWith('blob:')) {
+                      URL.revokeObjectURL(draftProfileImagePreview);
+                    }
+
+                    setDraftProfileImageFile(file);
+                    setDraftProfileImagePreview(file ? URL.createObjectURL(file) : profileImageUrl ?? '');
+                  }}
+                />
+              </label>
+
+              <div className="ss-profile-preview">
+                {draftProfileImagePreview ? <img src={draftProfileImagePreview} alt="Profile preview" /> : <span>{profileInitials}</span>}
+              </div>
+
+              {profileError ? <p className="ss-profile-modal-error">{profileError}</p> : null}
+
+              <div className="ss-profile-modal-actions">
+                <button type="button" className="ss-chip-btn" onClick={saveProfileImage} disabled={isProfileSaving}>
+                  {isProfileSaving ? 'Saving...' : 'Save image'}
+                </button>
+                <button type="button" className="ss-chip-btn ss-chip-btn-ghost" onClick={closeProfileModal} disabled={isProfileSaving}>
+                  Cancel
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
       </main>
     </div>
   );
 }
+

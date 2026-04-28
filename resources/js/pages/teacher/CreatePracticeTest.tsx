@@ -226,12 +226,12 @@ export default function CreatePracticeTest() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save practice test');
+        throw new Error('Failed to save test');
       }
 
       navigate('/teacher-dashboard/practice-tests');
     } catch (error) {
-      setSaveError('Failed to save practice test. Please try again.');
+      setSaveError('Failed to save test. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -247,10 +247,10 @@ export default function CreatePracticeTest() {
           <div className="td-create-test-header">
             <button className="td-back-btn" onClick={() => navigate('/teacher-dashboard/practice-tests')}>
               <ArrowLeft size={20} />
-              Back to Practice Tests
+              Back to Tests
             </button>
             <div>
-              <h1 className="td-page-title">Create Practice Test</h1>
+              <h1 className="td-page-title">Create Test</h1>
               <p className="td-page-subtitle">Build assessments with multiple question types and AI generation</p>
             </div>
           </div>
@@ -273,7 +273,7 @@ export default function CreatePracticeTest() {
                         type="text"
                         value={testTitle}
                         onChange={(e) => setTestTitle(e.target.value)}
-                        placeholder="e.g., Midterm Practice Test"
+                        placeholder="e.g., Midterm Test"
                         className="td-input"
                       />
                     </label>
@@ -666,7 +666,7 @@ export default function CreatePracticeTest() {
                     onClick={handleSavePracticeTest}
                     disabled={isSaving || questions.length === 0}
                   >
-                    {isSaving ? 'Saving...' : 'Save Practice Test'}
+                    {isSaving ? 'Saving...' : 'Save Test'}
                   </button>
                 </div>
               </div>

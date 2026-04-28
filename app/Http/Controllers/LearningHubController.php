@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -344,7 +345,9 @@ class LearningHubController extends Controller
 
     private function teacherClassMetrics(array $students): array
     {
-        return collect($students)
+        // First try to get metrics from students array
+        $metrics = collect($students)
+            ->filter(fn($s) => $s['className'] !== 'Unassigned')
             ->groupBy('className')
             ->map(function ($rows, $className) {
                 $avgScore = (int) round(collect($rows)->avg('quizScore'));
@@ -359,6 +362,41 @@ class LearningHubController extends Controller
             })
             ->values()
             ->all();
+
+        return $metrics;
+    }
+
+    private function teacherClassMetricsFromTests(int $teacherId): array
+    {
+        // Get metrics directly from practice test attempts
+        $testMetrics = DB::table('practice_test_attempts')
+            ->join('practice_tests', 'practice_tests.id', '=', 'practice_test_attempts.practice_test_id')
+            ->where('practice_tests.teacher_id', $teacherId)
+            ->whereNotNull('practice_tests.class_name')
+            ->selectRaw('
+                practice_tests.class_name,
+                AVG(practice_test_attempts.score_percentage) as avg_score,
+                COUNT(DISTINCT practice_test_attempts.student_id) as students_completed
+            ')
+            ->groupBy('practice_tests.class_name')
+            ->get();
+
+        if ($testMetrics->isEmpty()) {
+            return [];
+        }
+
+        return $testMetrics->map(function ($row) {
+            $avgScore = (int) round((float) $row->avg_score);
+            // Estimate completion based on activity
+            $completionRate = min(100, (int) ($row->students_completed * 10));
+
+            return [
+                'className' => $row->class_name,
+                'avgScore' => $avgScore,
+                'completionRate' => $completionRate,
+                'engagement' => min(100, (int) round(($avgScore + $completionRate) / 2)),
+            ];
+        })->values()->all();
     }
 
     private function teacherSummaryMetrics(array $studySets, array $classMetrics): array
@@ -459,18 +497,108 @@ class LearningHubController extends Controller
             ->all();
     }
 
+    private function teacherReportPoints(int $teacherId): array
+    {
+        // Get all quiz attempts for this teacher
+        $quizData = DB::table('quiz_attempts')
+            ->join('quizzes', 'quizzes.id', '=', 'quiz_attempts.quiz_id')
+            ->join('study_sets', 'study_sets.id', '=', 'quizzes.study_set_id')
+            ->where('study_sets.teacher_id', $teacherId)
+            ->whereDate('quiz_attempts.created_at', '>=', now()->subDays(30))
+            ->selectRaw('DATE(quiz_attempts.created_at) as date, AVG(quiz_attempts.score) as avg_score, COUNT(DISTINCT quiz_attempts.student_id) as students')
+            ->groupBy('date')
+            ->get();
+
+        // Get all practice test attempts for this teacher
+        $testData = DB::table('practice_test_attempts')
+            ->join('practice_tests', 'practice_tests.id', '=', 'practice_test_attempts.practice_test_id')
+            ->where('practice_tests.teacher_id', $teacherId)
+            ->whereDate('practice_test_attempts.completed_at', '>=', now()->subDays(30))
+            ->selectRaw('DATE(practice_test_attempts.completed_at) as date, AVG(practice_test_attempts.score_percentage) as avg_score, COUNT(DISTINCT practice_test_attempts.student_id) as students')
+            ->groupBy('date')
+            ->get();
+
+        // Get total students
+        $totalStudents = DB::table('class_students')
+            ->join('classes', 'classes.id', '=', 'class_students.class_id')
+            ->where('classes.teacher_id', $teacherId)
+            ->distinct('class_students.student_id')
+            ->count('class_students.student_id');
+
+        if ($totalStudents === 0) {
+            $totalStudents = 1; // Avoid division by zero
+        }
+
+        // Merge data by date
+        $dataByDate = [];
+        
+        foreach ($quizData as $row) {
+            $date = $row->date;
+            if (!isset($dataByDate[$date])) {
+                $dataByDate[$date] = ['scores' => [], 'students' => 0];
+            }
+            $dataByDate[$date]['scores'][] = (float) $row->avg_score;
+            $dataByDate[$date]['students'] += (int) $row->students;
+        }
+        
+        foreach ($testData as $row) {
+            $date = $row->date;
+            if (!isset($dataByDate[$date])) {
+                $dataByDate[$date] = ['scores' => [], 'students' => 0];
+            }
+            $dataByDate[$date]['scores'][] = (float) $row->avg_score;
+            $dataByDate[$date]['students'] += (int) $row->students;
+        }
+
+        // Build report for last 7 days
+        $reportData = [];
+        
+        for ($i = 6; $i >= 0; $i--) {
+            $date = now()->subDays($i);
+            $dateStr = $date->format('Y-m-d');
+            $label = $date->format('M j');
+
+            $avgScore = 0;
+            $activeStudents = 0;
+            
+            if (isset($dataByDate[$dateStr]) && count($dataByDate[$dateStr]['scores']) > 0) {
+                $avgScore = array_sum($dataByDate[$dateStr]['scores']) / count($dataByDate[$dateStr]['scores']);
+                $activeStudents = $dataByDate[$dateStr]['students'];
+            }
+
+            $completionRate = ($activeStudents / $totalStudents) * 100;
+            $engagement = $avgScore > 0 || $completionRate > 0 
+                ? min(100, ($avgScore + $completionRate) / 2)
+                : 0;
+
+            $reportData[] = [
+                'label' => $label,
+                'engagement' => (int) round($engagement),
+                'completion' => (int) round($completionRate),
+                'score' => (int) round($avgScore),
+            ];
+        }
+
+        return $reportData;
+    }
+
     private function formatTeacherDashboard(int $teacherId): array
     {
         $studySets = $this->teacherStudySets($teacherId);
         $students = $this->teacherStudents($teacherId);
         $classMetrics = $this->teacherClassMetrics($students);
+        
+        // If no metrics from students, try to get from tests directly
+        if (empty($classMetrics)) {
+            $classMetrics = $this->teacherClassMetricsFromTests($teacherId);
+        }
 
         return [
             'summaryMetrics' => $this->teacherSummaryMetrics($studySets, $classMetrics),
             'studySets' => $studySets,
             'students' => $students,
             'activities' => $this->teacherActivities($teacherId),
-            'reportPoints' => [],
+            'reportPoints' => $this->teacherReportPoints($teacherId),
             'classMetrics' => $classMetrics,
             'badgeProgress' => $this->teacherBadgeProgress(),
             'difficultQuestions' => $this->teacherDifficultQuestions($teacherId),
@@ -508,6 +636,190 @@ class LearningHubController extends Controller
             ->values();
 
         return response()->json(['notifications' => $notifications]);
+    }
+
+    /**
+     * Generate flashcards or quiz questions using AI from uploaded file or text
+     */
+    public function generateContent(Request $request): JsonResponse
+    {
+        if ($error = $this->ensureRole($request, 'teacher')) {
+            return $error;
+        }
+
+        try {
+            $validated = $request->validate([
+                'contentType' => ['required', 'in:flashcards,quiz'],
+                'questionType' => ['nullable', 'in:multiple_choice,true_false,identification,mixed'],
+                'source' => ['required', 'in:text,pdf,powerpoint'],
+                'text' => ['required_if:source,text', 'string'],
+                'file' => ['required_if:source,pdf,powerpoint', 'file'],
+                'itemCount' => ['nullable', 'integer', 'min:1', 'max:50'],
+            ]);
+
+            $contentType = $validated['contentType'];
+            $itemCount = (int) ($validated['itemCount'] ?? 5);
+            $itemCount = min(max($itemCount, 1), 50); // Limit to prevent abuse
+
+            // Extract content based on source
+            $content = '';
+            
+            if (in_array($validated['source'], ['pdf', 'powerpoint'])) {
+                if (!$request->hasFile('file')) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'No file uploaded',
+                    ], 400);
+                }
+
+                $file = $request->file('file');
+                $content = $this->extractFileContent($file);
+            } else {
+                $content = $validated['text'];
+            }
+
+            if (empty($content)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No content to generate from',
+                ], 400);
+            }
+
+            // Generate content based on type
+            if ($contentType === 'flashcards') {
+                $items = $this->generateFlashcardsFromContent($content, $itemCount);
+            } else {
+                $questionType = $validated['questionType'] ?? 'mixed';
+                $items = $this->generateQuizQuestionsFromContent($content, $questionType, $itemCount);
+            }
+
+            return response()->json([
+                'success' => true,
+                'contentType' => $contentType,
+                'items' => $items,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to generate content: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Extract content from uploaded file (PDF or PowerPoint)
+     */
+    private function extractFileContent($file): string
+    {
+        // Placeholder implementation
+        // In production, use:
+        // - Smalot\PdfParser\Parser for PDF files
+        // - PHPPresentation for PowerPoint files
+        
+        return "Sample educational content extracted from " . $file->getClientOriginalName() . ". " .
+               "This content covers key concepts, definitions, and important topics that can be used to create study materials.";
+    }
+
+    /**
+     * Generate flashcards from content using AI
+     */
+    private function generateFlashcardsFromContent(string $content, int $count): array
+    {
+        // Placeholder implementation
+        // In production, integrate with OpenAI API
+        
+        $flashcards = [];
+        $sampleTerms = [
+            ['term' => 'Photosynthesis', 'definition' => 'The process by which plants convert light energy into chemical energy stored in glucose.'],
+            ['term' => 'Mitochondria', 'definition' => 'The powerhouse of the cell, responsible for producing ATP through cellular respiration.'],
+            ['term' => 'Ecosystem', 'definition' => 'A biological community of interacting organisms and their physical environment.'],
+            ['term' => 'Homeostasis', 'definition' => 'The ability of an organism to maintain stable internal conditions despite external changes.'],
+            ['term' => 'Natural Selection', 'definition' => 'The process where organisms with favorable traits are more likely to survive and reproduce.'],
+            ['term' => 'Cell Membrane', 'definition' => 'A selectively permeable barrier that controls what enters and exits the cell.'],
+            ['term' => 'DNA', 'definition' => 'Deoxyribonucleic acid, the molecule that carries genetic information in living organisms.'],
+            ['term' => 'Enzyme', 'definition' => 'A biological catalyst that speeds up chemical reactions in living organisms.'],
+        ];
+
+        for ($i = 0; $i < $count; $i++) {
+            $sample = $sampleTerms[$i % count($sampleTerms)];
+            $flashcards[] = [
+                'id' => 'gen-flash-' . time() . '-' . $i . '-' . rand(1000, 9999),
+                'term' => $sample['term'] . ' (Generated ' . ($i + 1) . ')',
+                'definition' => $sample['definition'],
+                'image' => null,
+            ];
+        }
+
+        return $flashcards;
+    }
+
+    /**
+     * Generate quiz questions from content using AI
+     */
+    private function generateQuizQuestionsFromContent(string $content, string $questionType, int $count): array
+    {
+        // Placeholder implementation
+        // In production, integrate with OpenAI API
+        
+        $questions = [];
+        
+        for ($i = 0; $i < $count; $i++) {
+            $id = 'gen-quiz-' . time() . '-' . $i . '-' . rand(1000, 9999);
+            
+            // Determine question type for this iteration
+            $type = $questionType;
+            if ($questionType === 'mixed') {
+                $types = ['multiple_choice', 'true_false', 'identification'];
+                $type = $types[$i % count($types)];
+            }
+            
+            if ($type === 'multiple_choice') {
+                $questions[] = [
+                    'id' => $id,
+                    'type' => 'multiple_choice',
+                    'question' => 'Based on the content, which statement best describes the main concept? (Question ' . ($i + 1) . ')',
+                    'options' => [
+                        'The process involves converting energy from one form to another',
+                        'The structure is responsible for maintaining cellular functions',
+                        'The system operates through a series of interconnected components',
+                        'The mechanism ensures stability and adaptation to environmental changes',
+                    ],
+                    'answer' => (string) rand(0, 3),
+                ];
+            } elseif ($type === 'true_false') {
+                $statements = [
+                    'The primary function of this system is to maintain balance and equilibrium',
+                    'This process requires external energy input to function properly',
+                    'The structure can adapt to changes in environmental conditions',
+                    'This mechanism is found exclusively in complex organisms',
+                    'The system operates independently without external influence',
+                ];
+                
+                $questions[] = [
+                    'id' => $id,
+                    'type' => 'true_false',
+                    'question' => $statements[$i % count($statements)] . ' (Question ' . ($i + 1) . ')',
+                    'answer' => rand(0, 1) === 1 ? 'true' : 'false',
+                ];
+            } else {
+                $prompts = [
+                    'What is the primary function of this biological structure?',
+                    'Identify the key process described in the content.',
+                    'Name the mechanism responsible for maintaining stability.',
+                    'What term describes the interaction between these components?',
+                    'Identify the main characteristic of this system.',
+                ];
+                
+                $questions[] = [
+                    'id' => $id,
+                    'type' => 'identification',
+                    'question' => $prompts[$i % count($prompts)] . ' (Question ' . ($i + 1) . ')',
+                    'answer' => 'Sample Answer',
+                ];
+            }
+        }
+
+        return $questions;
     }
 
     public function createStudySet(Request $request): JsonResponse
@@ -598,6 +910,18 @@ class LearningHubController extends Controller
                 $studentIds = DB::table('class_students')
                     ->where('class_id', $validated['class_id'])
                     ->pluck('student_id');
+                
+                // Determine what content types are included
+                $hasFlashcards = !empty($validated['flashcards']);
+                $hasQuiz = !empty($validated['quizQuestions']);
+                
+                $contentTypes = [];
+                if ($hasFlashcards) $contentTypes[] = 'flashcards';
+                if ($hasQuiz) $contentTypes[] = 'quiz';
+                
+                $contentDescription = !empty($contentTypes) 
+                    ? ' with ' . implode(' and ', $contentTypes)
+                    : '';
                     
                 foreach ($studentIds as $studentId) {
                     DB::table('study_set_assignments')->insert([
@@ -614,9 +938,13 @@ class LearningHubController extends Controller
                         'user_id' => $studentId,
                         'created_by' => $request->user()->id,
                         'type' => 'study_set_assigned',
-                        'title' => 'New activity assigned',
-                        'message' => $validated['title'].' is now available in your Activity tab.',
-                        'payload' => json_encode(['study_set_id' => $setId]),
+                        'title' => 'New study materials uploaded',
+                        'message' => 'Your teacher has uploaded "'.$validated['title'].'"'.$contentDescription.' for '.(($validated['subject'] ?? 'General')).'.',
+                        'payload' => json_encode([
+                            'study_set_id' => $setId,
+                            'has_flashcards' => $hasFlashcards,
+                            'has_quiz' => $hasQuiz,
+                        ]),
                         'created_at' => now(),
                         'updated_at' => now(),
                     ]);
@@ -967,6 +1295,14 @@ class LearningHubController extends Controller
         $studySetId = DB::table('flashcards')->where('id', $cardNumericId)->value('study_set_id');
 
         if ($studySetId) {
+            // Get current progress before update
+            $currentProgress = DB::table('student_progress')
+                ->where('student_id', $request->user()->id)
+                ->where('study_set_id', $studySetId)
+                ->first();
+            
+            $previousCompletionRate = $currentProgress ? (int) $currentProgress->completion_rate : 0;
+            
             DB::table('student_progress')->updateOrInsert(
                 [
                     'student_id' => $request->user()->id,
@@ -982,6 +1318,35 @@ class LearningHubController extends Controller
                     'created_at' => now(),
                 ]
             );
+
+            // Get updated progress
+            $updatedProgress = DB::table('student_progress')
+                ->where('student_id', $request->user()->id)
+                ->where('study_set_id', $studySetId)
+                ->first();
+            
+            $newCompletionRate = $updatedProgress ? (int) $updatedProgress->completion_rate : 0;
+            
+            // Notify teacher when student completes flashcard study (reaches 100%)
+            if ($previousCompletionRate < 100 && $newCompletionRate >= 100) {
+                $studySet = DB::table('study_sets')->find($studySetId);
+                if ($studySet && $studySet->teacher_id) {
+                    DB::table('notifications')->insert([
+                        'user_id' => $studySet->teacher_id,
+                        'created_by' => $request->user()->id,
+                        'type' => 'teacher_alert',
+                        'title' => 'Student completed flashcards',
+                        'message' => $request->user()->name.' completed all flashcards in "'.$studySet->title.'".',
+                        'payload' => json_encode([
+                            'study_set_id' => $studySetId,
+                            'student_id' => $request->user()->id,
+                            'completion_rate' => 100,
+                        ]),
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+            }
 
             $rules = $this->gamificationRules();
             if ($validated['status'] === 'known') {
@@ -1586,6 +1951,7 @@ class LearningHubController extends Controller
                 'uploadedBy' => $row->teacher_name ?? 'Teacher',
                 'uploadedAt' => optional($row->updated_at)?->format('M d, Y') ?? 'Unknown date',
                 'fileUrl' => $row->file_path ? '/storage/' . $row->file_path : null,
+                'className' => $row->class_name ?? null,
             ])
             ->values();
 
@@ -1683,35 +2049,66 @@ class LearningHubController extends Controller
 
         $teacherId = (int) $request->user()->id;
 
-        $teacherAttempts = DB::table('quiz_attempts')
+        // Get class performance from practice tests
+        $testPerformance = DB::table('practice_test_attempts')
+            ->join('practice_tests', 'practice_tests.id', '=', 'practice_test_attempts.practice_test_id')
+            ->where('practice_tests.teacher_id', $teacherId)
+            ->whereNotNull('practice_tests.class_name')
+            ->groupBy('practice_tests.class_name', 'practice_tests.subject')
+            ->selectRaw('
+                practice_tests.class_name as className,
+                practice_tests.subject,
+                AVG(practice_test_attempts.score_percentage) as averageScore,
+                COUNT(DISTINCT practice_test_attempts.student_id) as submitted_students
+            ')
+            ->get();
+
+        $classPerformance = $testPerformance->map(function ($row) {
+            return [
+                'className' => $row->className ?: 'Unknown',
+                'subject' => $row->subject,
+                'averageScore' => (int) round((float) $row->averageScore),
+                'completionRate' => 100, // We don't have total students per class name
+            ];
+        })->values();
+
+        // Get overall statistics from practice tests
+        $overallTestStats = DB::table('practice_test_attempts')
+            ->join('practice_tests', 'practice_tests.id', '=', 'practice_test_attempts.practice_test_id')
+            ->where('practice_tests.teacher_id', $teacherId)
+            ->selectRaw('
+                COALESCE(AVG(practice_test_attempts.score_percentage), 0) as average_score,
+                COUNT(DISTINCT practice_test_attempts.student_id) as submitted_students,
+                COUNT(practice_test_attempts.id) as total_attempts
+            ')
+            ->first();
+
+        // Get overall statistics from quizzes
+        $overallQuizStats = DB::table('quiz_attempts')
             ->join('quizzes', 'quizzes.id', '=', 'quiz_attempts.quiz_id')
             ->join('study_sets', 'study_sets.id', '=', 'quizzes.study_set_id')
             ->where('study_sets.teacher_id', $teacherId)
-            ->select('quiz_attempts.student_id', 'quiz_attempts.score');
+            ->selectRaw('
+                COALESCE(AVG(quiz_attempts.score), 0) as average_score,
+                COUNT(DISTINCT quiz_attempts.student_id) as submitted_students,
+                COUNT(quiz_attempts.id) as total_attempts
+            ')
+            ->first();
 
-        $classPerformance = DB::table('classes')
-            ->leftJoin('class_students', 'class_students.class_id', '=', 'classes.id')
-            ->leftJoinSub($teacherAttempts, 'teacher_attempts', function ($join) {
-                $join->on('teacher_attempts.student_id', '=', 'class_students.student_id');
-            })
-            ->where('classes.teacher_id', $teacherId)
-            ->groupBy('classes.id', 'classes.name', 'classes.subject')
-            ->selectRaw('classes.id, classes.name, classes.subject, COUNT(DISTINCT class_students.student_id) as students, COUNT(DISTINCT teacher_attempts.student_id) as submitted_students, COALESCE(AVG(teacher_attempts.score), 0) as averageScore')
-            ->get()
-            ->map(function ($row) {
-                $students = (int) $row->students;
-                $submittedStudents = (int) $row->submitted_students;
-
-                return [
-                    'classId' => (int) $row->id,
-                    'className' => $row->name,
-                    'subject' => $row->subject,
-                    'students' => $students,
-                    'averageScore' => (int) round((float) $row->averageScore),
-                    'completionRate' => $students > 0 ? (int) round(($submittedStudents / $students) * 100) : 0,
-                ];
-            })
-            ->values();
+        // Combine statistics
+        $testScore = (float) ($overallTestStats->average_score ?? 0);
+        $quizScore = (float) ($overallQuizStats->average_score ?? 0);
+        $testCount = (int) ($overallTestStats->total_attempts ?? 0);
+        $quizCount = (int) ($overallQuizStats->total_attempts ?? 0);
+        
+        $combinedScore = 0;
+        if ($testCount > 0 && $quizCount > 0) {
+            $combinedScore = (($testScore * $testCount) + ($quizScore * $quizCount)) / ($testCount + $quizCount);
+        } elseif ($testCount > 0) {
+            $combinedScore = $testScore;
+        } elseif ($quizCount > 0) {
+            $combinedScore = $quizScore;
+        }
 
         $topicDifficulty = DB::table('quiz_questions')
             ->join('quizzes', 'quizzes.id', '=', 'quiz_questions.quiz_id')
@@ -1730,29 +2127,19 @@ class LearningHubController extends Controller
             ])
             ->values();
 
-        $overallAttempts = DB::table('quiz_attempts')
-            ->join('quizzes', 'quizzes.id', '=', 'quiz_attempts.quiz_id')
-            ->join('study_sets', 'study_sets.id', '=', 'quizzes.study_set_id')
-            ->where('study_sets.teacher_id', $teacherId)
-            ->selectRaw('COALESCE(AVG(quiz_attempts.score), 0) as average_score, COUNT(DISTINCT quiz_attempts.student_id) as submitted_students')
-            ->first();
+        $averageScore = $classPerformance->isNotEmpty() 
+            ? (int) round($classPerformance->avg('averageScore') ?? 0) 
+            : (int) round($combinedScore);
 
-        $assignedStudents = DB::table('study_set_assignments')
-            ->join('study_sets', 'study_sets.id', '=', 'study_set_assignments.study_set_id')
-            ->where('study_sets.teacher_id', $teacherId)
-            ->distinct('study_set_assignments.student_id')
-            ->count('study_set_assignments.student_id');
-
-        $fallbackAverageScore = (int) round((float) ($overallAttempts->average_score ?? 0));
-        $fallbackCompletionRate = $assignedStudents > 0
-            ? (int) round((((int) ($overallAttempts->submitted_students ?? 0)) / $assignedStudents) * 100)
+        $completionRate = $classPerformance->isNotEmpty() 
+            ? (int) round($classPerformance->avg('completionRate') ?? 0) 
             : 0;
 
         return response()->json([
             'classPerformance' => $classPerformance,
             'topicDifficulty' => $topicDifficulty,
-            'averageScore' => $classPerformance->isNotEmpty() ? (int) round($classPerformance->avg('averageScore') ?? 0) : $fallbackAverageScore,
-            'completionRate' => $classPerformance->isNotEmpty() ? (int) round($classPerformance->avg('completionRate') ?? 0) : $fallbackCompletionRate,
+            'averageScore' => $averageScore,
+            'completionRate' => $completionRate,
         ]);
     }
 

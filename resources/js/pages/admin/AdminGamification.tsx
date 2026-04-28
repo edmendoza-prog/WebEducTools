@@ -130,23 +130,23 @@ export default function AdminGamification() {
 
   return (
     <AdminLayout>
-      <div className="td-dashboard-grid">
-        <section className="td-metric-grid">
-          <article className="td-metric-card"><p>Total XP</p><h3>{adminTotals.xp}</h3><span>Across all students</span></article>
-          <article className="td-metric-card"><p>Active Students</p><h3>{adminTotals.activeStudents}</h3><span>Last 7 days</span></article>
-          <article className="td-metric-card"><p>Engagement Rate</p><h3>{adminTotals.engagementRate}%</h3><span>Gamification interaction</span></article>
-          <article className="td-metric-card"><p>Retention Rate</p><h3>{adminTotals.retentionRate}%</h3><span>Streak-based retention</span></article>
+      <div className="admin-gamification-grid">
+        <section className="admin-metric-grid">
+          <article className="admin-metric-card"><p>Total XP</p><h3>{adminTotals.xp}</h3><span>Across all students</span></article>
+          <article className="admin-metric-card"><p>Active Students</p><h3>{adminTotals.activeStudents}</h3><span>Last 7 days</span></article>
+          <article className="admin-metric-card"><p>Engagement Rate</p><h3>{adminTotals.engagementRate}%</h3><span>Gamification interaction</span></article>
+          <article className="admin-metric-card"><p>Retention Rate</p><h3>{adminTotals.retentionRate}%</h3><span>Streak-based retention</span></article>
         </section>
 
-        <section className="td-panel td-panel-span-2">
-          <div className="td-panel-head">
-            <h2>Gamification Trends</h2>
+        <section className="admin-panel admin-panel-span-2">
+          <div className="admin-panel-header">
+            <h2 className="admin-panel-title">Gamification Trends</h2>
             <Sparkles size={16} />
           </div>
           {adminTrend.length === 0 ? (
-            <p className="td-empty-state">No gamification trend data yet.</p>
+            <p className="admin-empty-state">No gamification trend data yet.</p>
           ) : (
-            <div className="td-chart-card">
+            <div className="admin-chart-card">
               <ResponsiveContainer width="100%" height={260}>
                 <LineChart data={adminTrend}>
                   <CartesianGrid strokeDasharray="3 3" />
@@ -161,23 +161,23 @@ export default function AdminGamification() {
           )}
         </section>
 
-        <section className="td-panel">
+        <section className="admin-panel">
           {adminLeaders.length === 0 ? (
-            <p className="td-empty-state">No leaderboard data yet.</p>
+            <p className="admin-empty-state">No leaderboard data yet.</p>
           ) : (
             <LeaderboardTable leaders={adminLeaders} myRank={0} scope="global" onScope={() => undefined} />
           )}
         </section>
 
-        <section className="td-panel td-panel-span-2">
-          <div className="td-panel-head">
-            <h2>Points Rules Configuration</h2>
+        <section className="admin-panel admin-panel-span-2">
+          <div className="admin-panel-header">
+            <h2 className="admin-panel-title">Points Rules Configuration</h2>
             <Shield size={16} />
           </div>
           {Object.entries(adminRules).length === 0 ? (
-            <p className="td-empty-state">No XP rules configured yet.</p>
+            <p className="admin-empty-state">No XP rules configured yet.</p>
           ) : (
-            <div className="tcc-meta-grid">
+            <div className="admin-meta-grid">
               {Object.entries(adminRules).map(([key, value]) => (
                 <label key={key}>
                   {key}
@@ -190,26 +190,26 @@ export default function AdminGamification() {
               ))}
             </div>
           )}
-          <button className="td-inline-action" type="button" onClick={saveRules}>
+          <button className="admin-inline-action" type="button" onClick={saveRules}>
             Save XP Rules
           </button>
         </section>
 
-        <section className="td-panel td-panel-span-2">
-          <div className="td-panel-head">
-            <h2>Badge Management</h2>
-            <div className="td-panel-head-actions">
-              <button className="td-inline-action" type="button" onClick={() => setIsBadgeFormOpen(true)}>Create Badge</button>
+        <section className="admin-panel admin-panel-span-2">
+          <div className="admin-panel-header">
+            <h2 className="admin-panel-title">Badge Management</h2>
+            <div className="admin-panel-head-actions">
+              <button className="admin-inline-action" type="button" onClick={() => setIsBadgeFormOpen(true)}>Create Badge</button>
               <Award size={16} />
             </div>
           </div>
-          <div className="td-stack-list">
+          <div className="admin-stack-list">
             {adminBadges.length === 0 ? (
-              <p className="td-empty-state">No badges yet.</p>
+              <p className="admin-empty-state">No badges yet.</p>
             ) : (
               adminBadges.map((badge) => (
-                <article key={badge.id} className="td-stack-item td-stack-item-column">
-                  <div className="tcc-meta-grid">
+                <article key={badge.id} className="admin-stack-item">
+                  <div className="admin-meta-grid">
                     <label>
                       Name
                       <input type="text" value={badge.name} onChange={(e) => setAdminBadges((b) => b.map((x) => x.id === badge.id ? { ...x, name: e.target.value } : x))} />
@@ -227,7 +227,7 @@ export default function AdminGamification() {
                       <input type="number" value={badge.xp_reward} onChange={(e) => setAdminBadges((b) => b.map((x) => x.id === badge.id ? { ...x, xp_reward: Number(e.target.value) || 0 } : x))} />
                     </label>
                   </div>
-                  <button className="td-inline-action td-badge-save-action" type="button" onClick={() => updateBadge(badge)}>
+                  <button className="admin-inline-action" type="button" onClick={() => updateBadge(badge)}>
                     Save Badge
                   </button>
                 </article>
@@ -236,46 +236,44 @@ export default function AdminGamification() {
           </div>
         </section>
 
-        <section className="td-panel">
-          <div className="td-panel-head">
-            <h2>Moderation</h2>
+        <section className="admin-panel">
+          <div className="admin-panel-header">
+            <h2 className="admin-panel-title">Moderation</h2>
             <Shield size={16} />
           </div>
           <label>
             Student ID
             <input value={resetStudentId} onChange={(e) => setResetStudentId(e.target.value)} type="number" />
           </label>
-          <button className="td-inline-action" type="button" onClick={resetStudentGamification}>
+          <button className="admin-inline-action" type="button" onClick={resetStudentGamification}>
             Reset Scores
           </button>
         </section>
 
         {isBadgeFormOpen && (
-          <div className="td-badge-overlay" role="presentation" onClick={() => setIsBadgeFormOpen(false)}>
-            <div className="td-badge-frame" role="dialog" aria-modal="true" aria-labelledby="badge-form-title" onClick={(e) => e.stopPropagation()}>
-              <section className="td-badge-modal">
-                <div className="td-badge-modal-head">
-                  <div>
-                    <h2 id="badge-form-title">Create Badge</h2>
-                    <p>Float a new badge form, save it, and keep editing the list below.</p>
-                  </div>
-                  <button className="tcc-inline-icon" type="button" aria-label="Close badge form" onClick={() => setIsBadgeFormOpen(false)}>
-                    <X size={16} />
-                  </button>
+          <div className="admin-badge-overlay" role="presentation" onClick={() => setIsBadgeFormOpen(false)}>
+            <div className="admin-badge-modal" role="dialog" aria-modal="true" aria-labelledby="badge-form-title" onClick={(e) => e.stopPropagation()}>
+              <div className="admin-badge-modal-head">
+                <div>
+                  <h2 id="badge-form-title">Create Badge</h2>
+                  <p>Create a new badge for the gamification system.</p>
                 </div>
-                <div className="tcc-meta-grid td-badge-form-grid">
-                  <label>Code<input value={newBadge.code} onChange={(e) => setNewBadge((b) => ({ ...b, code: e.target.value }))} type="text" /></label>
-                  <label>Name<input value={newBadge.name} onChange={(e) => setNewBadge((b) => ({ ...b, name: e.target.value }))} type="text" /></label>
-                  <label>Requirement<input value={newBadge.requirementType} onChange={(e) => setNewBadge((b) => ({ ...b, requirementType: e.target.value }))} type="text" /></label>
-                  <label>Requirement Value<input value={newBadge.requirementValue} onChange={(e) => setNewBadge((b) => ({ ...b, requirementValue: Number(e.target.value) || 1 }))} type="number" /></label>
-                  <label>XP Reward<input value={newBadge.xpReward} onChange={(e) => setNewBadge((b) => ({ ...b, xpReward: Number(e.target.value) || 0 }))} type="number" /></label>
-                  <label className="td-badge-description">Description<input value={newBadge.description} onChange={(e) => setNewBadge((b) => ({ ...b, description: e.target.value }))} type="text" /></label>
-                </div>
-                <div className="td-badge-modal-actions">
-                  <button className="td-inline-action td-badge-save-action" type="button" onClick={createBadge}>Create Badge</button>
-                  <button className="tcc-chip-toggle" type="button" onClick={() => setIsBadgeFormOpen(false)}>Cancel</button>
-                </div>
-              </section>
+                <button className="admin-close-btn" type="button" aria-label="Close badge form" onClick={() => setIsBadgeFormOpen(false)}>
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="admin-meta-grid">
+                <label>Code<input value={newBadge.code} onChange={(e) => setNewBadge((b) => ({ ...b, code: e.target.value }))} type="text" /></label>
+                <label>Name<input value={newBadge.name} onChange={(e) => setNewBadge((b) => ({ ...b, name: e.target.value }))} type="text" /></label>
+                <label>Requirement<input value={newBadge.requirementType} onChange={(e) => setNewBadge((b) => ({ ...b, requirementType: e.target.value }))} type="text" /></label>
+                <label>Requirement Value<input value={newBadge.requirementValue} onChange={(e) => setNewBadge((b) => ({ ...b, requirementValue: Number(e.target.value) || 1 }))} type="number" /></label>
+                <label>XP Reward<input value={newBadge.xpReward} onChange={(e) => setNewBadge((b) => ({ ...b, xpReward: Number(e.target.value) || 0 }))} type="number" /></label>
+                <label style={{ gridColumn: '1 / -1' }}>Description<input value={newBadge.description} onChange={(e) => setNewBadge((b) => ({ ...b, description: e.target.value }))} type="text" /></label>
+              </div>
+              <div className="admin-badge-modal-actions">
+                <button className="admin-inline-action" type="button" onClick={createBadge}>Create Badge</button>
+                <button className="admin-btn-cancel" type="button" onClick={() => setIsBadgeFormOpen(false)}>Cancel</button>
+              </div>
             </div>
           </div>
         )}

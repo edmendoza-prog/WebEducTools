@@ -5,7 +5,6 @@ import {
   Award,
   Bell,
   BookOpen,
-  ChevronDown,
   FolderClosed,
   Home,
   Layers3,
@@ -43,7 +42,7 @@ const primaryNav: NavItem[] = [
 const teacherTools: NavItem[] = [
   { label: 'Assign activity', icon: <BookOpen size={18} />, path: '/teacher-dashboard/assign-activity' },
   { label: 'Study Guides', icon: <Layers3 size={18} />, path: '/teacher-dashboard/study-guides' },
-  { label: 'Practice Tests', icon: <Award size={18} />, path: '/teacher-dashboard/practice-tests' },
+  { label: 'Tests', icon: <Award size={18} />, path: '/teacher-dashboard/practice-tests' },
   { label: 'Reports', icon: <Sparkles size={18} />, path: '/teacher-dashboard/reports' },
 ];
 
@@ -65,6 +64,7 @@ export default function TeacherProfile() {
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [draftName, setDraftName] = useState('Teacher');
   const [draftEmail, setDraftEmail] = useState('teacher@example.com');
   const [draftProfileImageFile, setDraftProfileImageFile] = useState<File | null>(null);
@@ -126,6 +126,34 @@ export default function TeacherProfile() {
 
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isEditProfileOpen]);
+
+  useEffect(() => {
+    if (!isProfileMenuOpen) {
+      return undefined;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('.td-profile-menu')) {
+        return;
+      }
+      setIsProfileMenuOpen(false);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsProfileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isProfileMenuOpen]);
 
   useEffect(() => {
     if (!draftProfileImagePreview.startsWith('blob:')) {
@@ -248,19 +276,6 @@ export default function TeacherProfile() {
             </button>
           ))}
         </nav>
-
-        <button className="td-sidebar-profile is-active" type="button" aria-label="Profile page" onClick={() => navigate('/teacher-dashboard/profile')}>
-          <div className="td-sidebar-profile-avatar" aria-hidden="true">
-            {profileImageUrl ? <img className="td-avatar-image" src={profileImageUrl} alt="Teacher profile" /> : <span className="td-avatar-initials">{profileInitials}</span>}
-            <span className="td-avatar-dot" />
-          </div>
-          <div className="td-sidebar-profile-copy">
-            <p className="td-sidebar-profile-label">Profile</p>
-            <strong>{profileName}</strong>
-            <span>{profileEmail}</span>
-          </div>
-          <ChevronDown size={16} className="td-sidebar-profile-chevron" />
-        </button>
       </aside>
 
       <main className="td-main td-profile-main">
@@ -271,12 +286,78 @@ export default function TeacherProfile() {
           </div>
 
           <div className="td-top-actions td-top-actions-teacher">
-            <button className="td-inline-action" type="button" onClick={() => navigate('/teacher-dashboard')}>
-              <Home size={14} /> Dashboard
+            <button
+              className="td-icon-btn"
+              type="button"
+              onClick={() => navigate('/teacher-dashboard/notifications')}
+              aria-label="Notifications"
+              title="Notifications"
+            >
+              <Bell size={18} />
             </button>
-            <button className="td-inline-action" type="button" onClick={handleLogout} disabled={isLoggingOut}>
-              <LogOut size={14} /> {isLoggingOut ? 'Signing out...' : 'Sign out'}
-            </button>
+
+            <div className="td-profile-menu">
+              <button
+                type="button"
+                className={`td-avatar-btn ${isProfileMenuOpen ? 'is-open' : ''}`}
+                onClick={() => setIsProfileMenuOpen((current) => !current)}
+                aria-label="Open profile menu"
+              >
+                {profileImageUrl ? (
+                  <img className="td-avatar-image" src={profileImageUrl} alt="Teacher profile" />
+                ) : (
+                  <span className="td-avatar-initials">{profileInitials}</span>
+                )}
+                <span className="td-avatar-dot" />
+              </button>
+
+              {isProfileMenuOpen && (
+                <div className="td-profile-dropdown" onClick={(event) => event.stopPropagation()}>
+                  <div className="td-profile-user">
+                    <div className="td-profile-avatar" aria-hidden="true">
+                      {profileImageUrl ? (
+                        <img className="td-avatar-image" src={profileImageUrl} alt="Teacher profile" />
+                      ) : (
+                        <span>{profileInitials}</span>
+                      )}
+                    </div>
+                    <div>
+                      <p className="td-profile-name">{profileName}</p>
+                      <p className="td-profile-email">{profileEmail}</p>
+                    </div>
+                  </div>
+
+                  <div className="td-profile-group">
+                    <button
+                      type="button"
+                      className="td-profile-item"
+                      onClick={() => {
+                        setIsProfileMenuOpen(false);
+                        navigate('/teacher-dashboard');
+                      }}
+                    >
+                      <Home size={18} />
+                      <span>Dashboard</span>
+                    </button>
+
+                    <div className="td-profile-divider" />
+
+                    <button
+                      type="button"
+                      className="td-profile-item"
+                      onClick={() => {
+                        setIsProfileMenuOpen(false);
+                        handleLogout();
+                      }}
+                      disabled={isLoggingOut}
+                    >
+                      <LogOut size={18} />
+                      <span>{isLoggingOut ? 'Signing out...' : 'Sign out'}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

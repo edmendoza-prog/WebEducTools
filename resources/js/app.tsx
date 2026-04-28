@@ -17,7 +17,6 @@ import TeacherClasses from './pages/teacher/TeacherClasses';
 import TeacherStudentMonitoring from './pages/teacher/TeacherStudentMonitoring';
 import TeacherNotificationsPage from './pages/teacher/TeacherNotificationsPage';
 import TeacherReports from './pages/teacher/TeacherReports';
-import TeacherGamification from './pages/teacher/TeacherGamification';
 import TeacherStudyGuides from './pages/teacher/TeacherStudyGuides';
 import TeacherPracticeTests from './pages/teacher/TeacherPracticeTests';
 import CreatePracticeTest from './pages/teacher/CreatePracticeTest';
@@ -28,7 +27,6 @@ import AuthPortal from './pages/AuthPortal';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminStudents from './pages/admin/AdminStudents';
 import AdminTeachers from './pages/admin/AdminTeachers';
-import AdminGamification from './pages/admin/AdminGamification';
 
 type Role = 'student' | 'teacher' | 'admin';
 
@@ -99,7 +97,7 @@ function RoleGate({ allowedRole, children }: { allowedRole: Role; children: Reac
   }
 
   if (!isAuthenticated || !role) {
-    return <Navigate to={allowedRole === 'teacher' ? '/login/teacher' : allowedRole === 'admin' ? '/login' : '/login/student'} replace />;
+    return <Navigate to={allowedRole === 'teacher' ? '/login/teacher' : allowedRole === 'admin' ? '/login/admin' : '/login/student'} replace />;
   }
 
   if (role !== allowedRole) {
@@ -197,6 +195,7 @@ function AnimatedRoutes() {
         <Route path="/signup" element={<AuthPortal />} />
         <Route path="/login/student" element={<AuthPortal />} />
         <Route path="/login/teacher" element={<AuthPortal />} />
+        <Route path="/login/admin" element={<AuthPortal />} />
         <Route path="/signup/student" element={<AuthPortal />} />
         <Route path="/signup/teacher" element={<AuthPortal />} />
         <Route path="/student-dashboard/settings" element={studentSettingsPage} />
@@ -209,7 +208,6 @@ function AnimatedRoutes() {
         <Route path="/admin-dashboard" element={adminGuard(<AdminDashboard />)} />
         <Route path="/admin-dashboard/students" element={adminGuard(<AdminStudents />)} />
         <Route path="/admin-dashboard/teachers" element={adminGuard(<AdminTeachers />)} />
-        <Route path="/admin-dashboard/gamification" element={adminGuard(<AdminGamification />)} />
         <Route path="/teacher-dashboard" element={teacherGuard(<TeacherDashboard />)} />
         <Route path="/teacher-dashboard/library" element={teacherGuard(<TeacherLibrary />)} />
         <Route path="/teacher-dashboard/classes" element={teacherGuard(<TeacherClasses />)} />

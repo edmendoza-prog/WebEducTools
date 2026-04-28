@@ -45,7 +45,7 @@ export default function TeacherPracticeTests() {
         <div className="td-modern-dashboard">
           <div className="td-welcome-header">
             <div>
-              <h1 className="td-page-title">Practice Tests</h1>
+              <h1 className="td-page-title">Tests</h1>
               <p className="td-page-subtitle">Create and manage assessments for your students</p>
             </div>
             <button
@@ -53,7 +53,7 @@ export default function TeacherPracticeTests() {
               onClick={() => navigate('/teacher-dashboard/practice-tests/create')}
             >
               <Plus size={18} />
-              Create Practice Test
+              Create Test
             </button>
           </div>
 
@@ -64,15 +64,15 @@ export default function TeacherPracticeTests() {
                   <div className="td-empty-icon">
                     <ClipboardCheck size={48} />
                   </div>
-                  <h3>No practice tests yet</h3>
-                  <p>Create your first practice test to get started</p>
+                  <h3>No tests yet</h3>
+                  <p>Create your first test to get started</p>
                   <button
                     className="td-btn-primary"
                     onClick={() => navigate('/teacher-dashboard/practice-tests/create')}
                     style={{ marginTop: '1rem' }}
                   >
                     <Plus size={18} />
-                    Create Practice Test
+                    Create Test
                   </button>
                 </div>
               ) : (

@@ -18,6 +18,10 @@ Route::get('/login', function () {
 	return view('app');
 });
 
+Route::get('/login/admin', function () {
+	return view('app');
+});
+
 Route::get('/signup', function () {
 	return view('app');
 });
@@ -36,6 +40,7 @@ Route::prefix('api')->middleware('auth:sanctum')->group(function () {
 		Route::get('/notifications', [LearningHubController::class, 'teacherNotifications']);
 		Route::patch('/notifications/{notificationId}/read', [LearningHubController::class, 'markNotification']);
 		Route::post('/notifications/announcement', [LearningHubController::class, 'sendAnnouncement']);
+		Route::post('/generate-content', [LearningHubController::class, 'generateContent']);
 		Route::post('/study-sets', [LearningHubController::class, 'createStudySet']);
 		Route::put('/study-sets/{studySetId}', [LearningHubController::class, 'updateStudySet']);
 		Route::delete('/study-sets/{studySetId}', [LearningHubController::class, 'deleteStudySet']);

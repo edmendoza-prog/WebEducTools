@@ -95,6 +95,36 @@ class PracticeTestController extends Controller
                 DB::table('practice_test_questions')->insert($questionData);
             }
 
+            // Notify students in the assigned class
+            if (!empty($validated['className'])) {
+                $class = DB::table('classes')
+                    ->where('name', $validated['className'])
+                    ->where('teacher_id', $teacherId)
+                    ->first();
+                
+                if ($class) {
+                    $studentIds = DB::table('class_students')
+                        ->where('class_id', $class->id)
+                        ->pluck('student_id');
+                    
+                    foreach ($studentIds as $studentId) {
+                        DB::table('notifications')->insert([
+                            'user_id' => $studentId,
+                            'created_by' => $teacherId,
+                            'type' => 'practice_test_assigned',
+                            'title' => 'New practice test available',
+                            'message' => 'Your teacher has uploaded "'.$validated['title'].'" for '.$validated['subject'].'.',
+                            'payload' => json_encode([
+                                'practice_test_id' => $testId,
+                                'subject' => $validated['subject'],
+                            ]),
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
+                }
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Practice test created successfully',
@@ -470,6 +500,28 @@ class PracticeTestController extends Controller
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
+
+            // Notify teacher about test completion
+            $test = DB::table('practice_tests')->find($id);
+            if ($test && $test->teacher_id) {
+                $student = DB::table('users')->find($studentId);
+                $studentName = $student ? $student->name : 'A student';
+                
+                DB::table('notifications')->insert([
+                    'user_id' => $test->teacher_id,
+                    'created_by' => $studentId,
+                    'type' => 'teacher_alert',
+                    'title' => 'Student completed practice test',
+                    'message' => $studentName.' completed "'.$test->title.'" with '.$scorePercentage.'%.',
+                    'payload' => json_encode([
+                        'practice_test_id' => $id,
+                        'student_id' => $studentId,
+                        'score' => $scorePercentage,
+                    ]),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
 
             return response()->json([
                 'success' => true,

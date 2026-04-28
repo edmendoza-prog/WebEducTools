@@ -87,6 +87,7 @@ type ClassMaterial = {
   uploadedBy: string;
   uploadedAt: string;
   fileUrl?: string;
+  className?: string;
 };
 
 type SubjectPerformance = {
@@ -154,7 +155,7 @@ const navItems: StudentNav[] = [
   { label: 'Dashboard', path: '/student-dashboard', icon: <Home size={18} /> },
   { label: 'Classes', path: '/student-dashboard/classes', icon: <BookOpen size={18} /> },
   { label: 'Activity', path: '/student-dashboard/activity', icon: <Brain size={18} /> },
-  { label: 'Practice Test', path: '/student-dashboard/practice-tests', icon: <FileText size={18} /> },
+  { label: 'Test', path: '/student-dashboard/practice-tests', icon: <FileText size={18} /> },
   { label: 'Reports', path: '/student-dashboard/reports', icon: <BarChart3 size={18} /> },
   { label: 'Search & Collaboration', path: '/student-dashboard/library', icon: <Users size={18} /> },
 ];
@@ -1302,7 +1303,7 @@ export default function StudentDashboard() {
       return (
         <section className="ss-panel">
           <div className="ss-panel-head">
-            <h2>Practice Test Mode</h2>
+            <h2>Test Mode</h2>
             <Clock3 size={16} />
           </div>
           <p className="ss-insight">
@@ -1311,7 +1312,7 @@ export default function StudentDashboard() {
               : 'No practice questions available yet.'}
           </p>
           <button type="button" className="ss-chip-btn" onClick={startPracticeTest} disabled={quizQuestions.length === 0}>
-            Start Practice Test
+            Start Test
           </button>
         </section>
       );
@@ -1344,7 +1345,7 @@ export default function StudentDashboard() {
     return (
       <section className="ss-panel">
         <div className="ss-panel-head">
-          <h2>Practice Test In Progress</h2>
+          <h2>Test In Progress</h2>
           <span className="ss-pill">Time left: {practiceTimeLeft}s</span>
         </div>
 
@@ -1511,20 +1512,18 @@ export default function StudentDashboard() {
   );
 
   const renderClasses = () => {
-    // Empty state - no mock data
-    const className = "";
-    const classLocation = "";
+    // Get unique class names from materials
+    const uniqueClasses = Array.from(new Set(classMaterials.map(m => m.className).filter(Boolean)));
+    const displayClassName = uniqueClasses.length === 1 ? uniqueClasses[0] : uniqueClasses.length > 1 ? 'Your Classes' : 'Your Class';
 
     return (
       <div className="ss-activity-container">
         <div className="ss-activity-header">
           <div className="ss-activity-header-main">
-            <h1 className="ss-activity-class-name">{className || 'Your Class'}</h1>
-            {classLocation && (
-              <p className="ss-activity-class-location">
-                <Home size={14} /> {classLocation}
-              </p>
-            )}
+            <h1 className="ss-activity-class-name">{displayClassName}</h1>
+            <p className="ss-activity-class-location">
+              <BookOpen size={14} /> View and study lessons from your teachers
+            </p>
           </div>
         </div>
 
@@ -1563,8 +1562,11 @@ export default function StudentDashboard() {
                     <div className="ss-material-info">
                       <h3 className="ss-material-title">{material.title}</h3>
                       <p className="ss-material-meta">
-                        {material.type} • Uploaded by {material.uploadedBy}
+                        {material.type} {material.className ? `• ${material.className}` : ''} • Uploaded by {material.uploadedBy}
                       </p>
+                      {material.description && (
+                        <p className="ss-material-description">{material.description}</p>
+                      )}
                     </div>
                     {material.fileUrl && (
                       <a 

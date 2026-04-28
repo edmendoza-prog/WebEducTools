@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import TeacherLayout from '../../components/ui/TeacherLayout';
 import { csrfFetch } from '../../lib/csrf';
-import { BookOpen, Copy, Layers3, Plus, Trash2, X } from 'lucide-react';
+import { BookOpen, Copy, Layers3, Plus, Sparkles, Trash2, X } from 'lucide-react';
 
 type FlashcardDraft = {
   id: string;
@@ -58,6 +58,17 @@ export default function TeacherAssignActivity() {
   });
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishMessage, setPublishMessage] = useState('');
+  
+  // AI Generate states
+  const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
+  const [generateType, setGenerateType] = useState<'flashcards' | 'quiz'>('flashcards');
+  const [generateSource, setGenerateSource] = useState<'text' | 'pdf' | 'powerpoint'>('text');
+  const [generateText, setGenerateText] = useState('');
+  const [generateFile, setGenerateFile] = useState<File | null>(null);
+  const [generateCount, setGenerateCount] = useState(5);
+  const [generateQuestionType, setGenerateQuestionType] = useState<'multiple_choice' | 'true_false' | 'identification' | 'mixed'>('multiple_choice');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState('');
 
   useEffect(() => {
     const fetchClasses = async () => {
@@ -140,6 +151,90 @@ export default function TeacherAssignActivity() {
 
   const removeQuiz = (id: string) => {
     setQuizQuestions((current) => current.filter((q) => q.id !== id));
+  };
+
+  const openGenerateModal = (type: 'flashcards' | 'quiz') => {
+    setGenerateType(type);
+    setGenerateSource('text');
+    setGenerateText('');
+    setGenerateFile(null);
+    setGenerateCount(5);
+    setGenerateQuestionType('multiple_choice');
+    setGenerateError('');
+    setIsGenerateModalOpen(true);
+  };
+
+  const handleGenerate = async () => {
+    if (isGenerating) return;
+    
+    if (generateSource === 'text' && !generateText.trim()) {
+      setGenerateError('Please enter some text to generate from');
+      return;
+    }
+    
+    if ((generateSource === 'pdf' || generateSource === 'powerpoint') && !generateFile) {
+      setGenerateError('Please upload a file');
+      return;
+    }
+
+    setIsGenerating(true);
+    setGenerateError('');
+
+    try {
+      const formData = new FormData();
+      formData.append('contentType', generateType);
+      formData.append('source', generateSource);
+      formData.append('itemCount', generateCount.toString());
+      
+      if (generateType === 'quiz') {
+        formData.append('questionType', generateQuestionType);
+      }
+      
+      if (generateSource === 'text') {
+        formData.append('text', generateText);
+      } else if (generateFile) {
+        formData.append('file', generateFile);
+      }
+
+      const response = await csrfFetch('/api/teacher/generate-content', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate content');
+      }
+
+      const data = await response.json();
+      
+      if (data.success && data.items) {
+        if (generateType === 'flashcards') {
+          const newFlashcards = data.items.map((item: any) => ({
+            id: item.id || nextId('fc', flashcards.length),
+            term: item.term,
+            definition: item.definition,
+            image: item.image || '',
+          }));
+          setFlashcards((current) => [...current, ...newFlashcards]);
+        } else {
+          const newQuestions = data.items.map((item: any) => ({
+            id: item.id || nextId('quiz', quizQuestions.length),
+            question: item.question,
+            type: item.type,
+            options: item.options || [],
+            answer: item.answer,
+          }));
+          setQuizQuestions((current) => [...current, ...newQuestions]);
+        }
+        setIsGenerateModalOpen(false);
+      } else {
+        setGenerateError('Failed to generate content');
+      }
+    } catch (error) {
+      setGenerateError(error instanceof Error ? error.message : 'Failed to generate content');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handlePublish = async () => {
@@ -314,9 +409,19 @@ export default function TeacherAssignActivity() {
               )}
             </div>
 
-            <button className="td-inline-action" type="button" onClick={() => openFlashcardModal()}>
-              <Plus size={14} /> Add flashcard
-            </button>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button className="td-inline-action" type="button" onClick={() => openFlashcardModal()}>
+                <Plus size={14} /> Add flashcard
+              </button>
+              <button 
+                className="td-inline-action" 
+                type="button" 
+                onClick={() => openGenerateModal('flashcards')}
+                style={{ backgroundColor: '#6366f1', border: 'none' }}
+              >
+                <Sparkles size={14} /> Generate with AI
+              </button>
+            </div>
           </section>
 
           <section className="td-panel td-panel-span-2">
@@ -352,9 +457,19 @@ export default function TeacherAssignActivity() {
               )}
             </div>
 
-            <button className="td-inline-action" type="button" onClick={() => openQuizModal()}>
-              <Plus size={14} /> Add quiz question
-            </button>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button className="td-inline-action" type="button" onClick={() => openQuizModal()}>
+                <Plus size={14} /> Add quiz question
+              </button>
+              <button 
+                className="td-inline-action" 
+                type="button" 
+                onClick={() => openGenerateModal('quiz')}
+                style={{ backgroundColor: '#6366f1', border: 'none' }}
+              >
+                <Sparkles size={14} /> Generate with AI
+              </button>
+            </div>
           </section>
 
           {isFlashcardModalOpen && (
@@ -843,6 +958,261 @@ export default function TeacherAssignActivity() {
                       }}
                     >
                       Save Question
+                    </button>
+                  </div>
+                </section>
+              </div>
+            </div>
+          )}
+
+          {isGenerateModalOpen && (
+            <div 
+              className="td-badge-overlay" 
+              role="presentation" 
+              onClick={() => setIsGenerateModalOpen(false)}
+              style={{ backgroundColor: 'rgba(0, 0, 0, 0.85)' }}
+            >
+              <div 
+                className="td-badge-frame" 
+                role="dialog" 
+                aria-modal="true" 
+                onClick={(e) => e.stopPropagation()}
+                style={{ 
+                  maxWidth: '650px',
+                  backgroundColor: '#0f1729',
+                  border: '1px solid rgba(99, 102, 241, 0.2)',
+                  borderRadius: '12px',
+                  boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
+                }}
+              >
+                <section className="td-badge-modal" style={{ padding: '32px' }}>
+                  <div className="td-badge-modal-head" style={{ marginBottom: '24px', borderBottom: 'none', paddingBottom: '0' }}>
+                    <div>
+                      <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#fff', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Sparkles size={24} style={{ color: '#6366f1' }} />
+                        Generate {generateType === 'flashcards' ? 'Flashcards' : 'Quiz Questions'} with AI
+                      </h2>
+                      <p style={{ fontSize: '14px', color: '#94a3b8' }}>
+                        Use AI to generate content from your text or uploaded files.
+                      </p>
+                    </div>
+                    <button 
+                      className="tcc-inline-icon" 
+                      type="button" 
+                      aria-label="Close" 
+                      onClick={() => setIsGenerateModalOpen(false)}
+                      style={{ 
+                        position: 'absolute', 
+                        top: '24px', 
+                        right: '24px',
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '6px',
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        color: '#94a3b8',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.1)';
+                        e.currentTarget.style.color = '#fff';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color = '#94a3b8';
+                      }}
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+
+                  {generateError && (
+                    <div style={{ 
+                      padding: '12px', 
+                      marginBottom: '20px', 
+                      backgroundColor: '#991b1b', 
+                      color: '#fecaca', 
+                      borderRadius: '8px',
+                      fontSize: '14px'
+                    }}>
+                      {generateError}
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <label style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <span style={{ fontSize: '14px', fontWeight: '600', color: '#fff' }}>Content Source</span>
+                      <select
+                        value={generateSource}
+                        onChange={(e) => setGenerateSource(e.target.value as any)}
+                        style={{
+                          padding: '12px 16px',
+                          backgroundColor: '#1e293b',
+                          border: '1px solid #334155',
+                          borderRadius: '8px',
+                          color: '#fff',
+                          fontSize: '14px',
+                          outline: 'none',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <option value="text">Text Input</option>
+                        <option value="pdf">PDF Upload</option>
+                        <option value="powerpoint">PowerPoint Upload</option>
+                      </select>
+                    </label>
+
+                    {generateSource === 'text' && (
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <span style={{ fontSize: '14px', fontWeight: '600', color: '#fff' }}>Your Content</span>
+                        <textarea 
+                          value={generateText}
+                          onChange={(e) => setGenerateText(e.target.value)}
+                          placeholder="Paste your study material here..."
+                          rows={6}
+                          style={{
+                            padding: '12px 16px',
+                            backgroundColor: '#1e293b',
+                            border: '1px solid #334155',
+                            borderRadius: '8px',
+                            color: '#fff',
+                            fontSize: '14px',
+                            outline: 'none',
+                            resize: 'vertical',
+                            fontFamily: 'inherit'
+                          }}
+                        />
+                      </label>
+                    )}
+
+                    {(generateSource === 'pdf' || generateSource === 'powerpoint') && (
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <span style={{ fontSize: '14px', fontWeight: '600', color: '#fff' }}>
+                          Upload {generateSource === 'pdf' ? 'PDF' : 'PowerPoint'} File
+                        </span>
+                        <input
+                          type="file"
+                          accept={generateSource === 'pdf' ? '.pdf' : '.ppt,.pptx'}
+                          onChange={(e) => setGenerateFile(e.target.files?.[0] || null)}
+                          style={{
+                            padding: '12px 16px',
+                            backgroundColor: '#1e293b',
+                            border: '1px solid #334155',
+                            borderRadius: '8px',
+                            color: '#fff',
+                            fontSize: '14px',
+                            cursor: 'pointer'
+                          }}
+                        />
+                        {generateFile && (
+                          <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
+                            Selected: {generateFile.name}
+                          </p>
+                        )}
+                      </label>
+                    )}
+
+                    {generateType === 'quiz' && (
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <span style={{ fontSize: '14px', fontWeight: '600', color: '#fff' }}>Question Type</span>
+                        <select
+                          value={generateQuestionType}
+                          onChange={(e) => setGenerateQuestionType(e.target.value as any)}
+                          style={{
+                            padding: '12px 16px',
+                            backgroundColor: '#1e293b',
+                            border: '1px solid #334155',
+                            borderRadius: '8px',
+                            color: '#fff',
+                            fontSize: '14px',
+                            outline: 'none',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <option value="multiple_choice">Multiple Choice</option>
+                          <option value="true_false">True or False</option>
+                          <option value="identification">Identification</option>
+                          <option value="mixed">Mixed Types</option>
+                        </select>
+                      </label>
+                    )}
+
+                    <label style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <span style={{ fontSize: '14px', fontWeight: '600', color: '#fff' }}>
+                        Number of Items (1-50)
+                      </span>
+                      <input
+                        type="number"
+                        min="1"
+                        max="50"
+                        value={generateCount}
+                        onChange={(e) => setGenerateCount(Math.min(50, Math.max(1, parseInt(e.target.value) || 5)))}
+                        style={{
+                          padding: '12px 16px',
+                          backgroundColor: '#1e293b',
+                          border: '1px solid #334155',
+                          borderRadius: '8px',
+                          color: '#fff',
+                          fontSize: '14px',
+                          outline: 'none'
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '12px', marginTop: '32px', justifyContent: 'flex-end' }}>
+                    <button 
+                      type="button" 
+                      onClick={() => setIsGenerateModalOpen(false)}
+                      disabled={isGenerating}
+                      style={{
+                        padding: '10px 20px',
+                        backgroundColor: 'transparent',
+                        border: '1px solid #334155',
+                        borderRadius: '8px',
+                        color: '#94a3b8',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        cursor: isGenerating ? 'not-allowed' : 'pointer',
+                        opacity: isGenerating ? 0.5 : 1,
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={handleGenerate}
+                      disabled={isGenerating}
+                      style={{
+                        padding: '10px 24px',
+                        backgroundColor: '#6366f1',
+                        border: 'none',
+                        borderRadius: '8px',
+                        color: '#fff',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        cursor: isGenerating ? 'not-allowed' : 'pointer',
+                        opacity: isGenerating ? 0.7 : 1,
+                        transition: 'all 0.2s',
+                        boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      {isGenerating ? (
+                        <>Generating...</>
+                      ) : (
+                        <>
+                          <Sparkles size={16} />
+                          Generate
+                        </>
+                      )}
                     </button>
                   </div>
                 </section>

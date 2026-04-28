@@ -39,7 +39,7 @@ export default function StudentPracticeTest() {
         setPracticeTests(data.practiceTests || []);
       }
     } catch (error) {
-      console.error('Failed to load practice tests:', error);
+      console.error('Failed to load tests:', error);
     } finally {
       setLoading(false);
     }
@@ -65,8 +65,8 @@ export default function StudentPracticeTest() {
         {/* Header */}
         <div className="sp-header">
           <div>
-            <h1 className="sp-page-title">Practice Tests</h1>
-            <p className="sp-page-subtitle">Complete practice tests to assess your knowledge</p>
+            <h1 className="sp-page-title">Tests</h1>
+            <p className="sp-page-subtitle">Complete tests to assess your knowledge</p>
           </div>
         </div>
 
@@ -94,12 +94,12 @@ export default function StudentPracticeTest() {
 
         {/* Practice Tests Grid */}
         {loading ? (
-          <div className="sp-loading">Loading practice tests...</div>
+          <div className="sp-loading">Loading tests...</div>
         ) : filteredTests.length === 0 ? (
           <div className="sp-empty-state">
             <FileText size={48} style={{ color: '#cbd5e1' }} />
-            <h3>No practice tests {filter !== 'all' ? filter : 'available'}</h3>
-            <p>Your teacher will assign practice tests here</p>
+            <h3>No tests {filter !== 'all' ? filter : 'available'}</h3>
+            <p>Your teacher will assign tests here</p>
           </div>
         ) : (
           <div className="sp-tests-grid">

@@ -26,6 +26,8 @@ export default function StudentFlashcards() {
   const [knownCards, setKnownCards] = useState<string[]>([]);
   const [reviewCards, setReviewCards] = useState<string[]>([]);
   const [reviewQueue, setReviewQueue] = useState<FlashCard[]>([]);
+  const [reviewedCards, setReviewedCards] = useState<string[]>([]);
+  const [isCompleted, setIsCompleted] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -69,6 +71,19 @@ export default function StudentFlashcards() {
       // Keep local state.
     }
 
+    // Mark this card as reviewed
+    const newReviewedCards = reviewedCards.includes(currentCard.id) 
+      ? reviewedCards 
+      : [...reviewedCards, currentCard.id];
+    setReviewedCards(newReviewedCards);
+
+    // Check if all cards have been reviewed
+    if (newReviewedCards.length >= flashcards.length) {
+      setIsCompleted(true);
+      setFlipped(false);
+      return;
+    }
+
     setFlipped(false);
     setCardIndex((index) => (index + 1) % flashcards.length);
   };
@@ -80,12 +95,23 @@ export default function StudentFlashcards() {
     setReviewQueue(randomized);
     setCardIndex(flashcards.findIndex((card) => card.id === randomized[0]?.id));
     setFlipped(false);
+    setIsCompleted(false);
+    setReviewedCards([]);
   };
 
   const shuffleCards = () => {
     setFlashcards((c) => shuffleArray(c));
     setCardIndex(0);
     setFlipped(false);
+    setIsCompleted(false);
+    setReviewedCards([]);
+  };
+
+  const restartReview = () => {
+    setCardIndex(0);
+    setFlipped(false);
+    setIsCompleted(false);
+    setReviewedCards([]);
   };
 
   return (
@@ -104,8 +130,124 @@ export default function StudentFlashcards() {
             </div>
           </div>
 
+          {!isCompleted && flashcards.length > 0 && (
+            <div style={{ 
+              padding: '12px 16px', 
+              backgroundColor: '#1e293b', 
+              borderRadius: '8px', 
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <span style={{ fontSize: '14px', color: '#94a3b8', fontWeight: '500' }}>
+                Card {reviewedCards.length + 1} of {flashcards.length}
+              </span>
+              <div style={{ 
+                flex: 1, 
+                maxWidth: '200px', 
+                height: '8px', 
+                backgroundColor: '#334155', 
+                borderRadius: '4px',
+                marginLeft: '16px',
+                overflow: 'hidden'
+              }}>
+                <div style={{
+                  height: '100%',
+                  width: `${(reviewedCards.length / flashcards.length) * 100}%`,
+                  backgroundColor: '#6366f1',
+                  transition: 'width 0.3s ease'
+                }} />
+              </div>
+            </div>
+          )}
+
           {flashcards.length === 0 ? (
             <p className="ss-empty">No flashcards available yet.</p>
+          ) : isCompleted ? (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '48px 24px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '24px',
+              alignItems: 'center'
+            }}>
+              <div style={{ fontSize: '64px' }}>🎉</div>
+              <div>
+                <h2 style={{ fontSize: '28px', fontWeight: '700', marginBottom: '8px' }}>
+                  Review Complete!
+                </h2>
+                <p style={{ color: '#94a3b8', fontSize: '16px' }}>
+                  You've reviewed all {flashcards.length} flashcards
+                </p>
+              </div>
+              
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: '1fr 1fr', 
+                gap: '16px', 
+                width: '100%',
+                maxWidth: '400px',
+                marginTop: '16px'
+              }}>
+                <div style={{
+                  padding: '20px',
+                  backgroundColor: '#065f46',
+                  borderRadius: '12px',
+                  border: '2px solid #10b981'
+                }}>
+                  <p style={{ fontSize: '14px', marginBottom: '4px', opacity: 0.9 }}>Known</p>
+                  <h3 style={{ fontSize: '32px', fontWeight: '700' }}>{knownCards.length}</h3>
+                </div>
+                <div style={{
+                  padding: '20px',
+                  backgroundColor: '#7c2d12',
+                  borderRadius: '12px',
+                  border: '2px solid #f97316'
+                }}>
+                  <p style={{ fontSize: '14px', marginBottom: '4px', opacity: 0.9 }}>Review</p>
+                  <h3 style={{ fontSize: '32px', fontWeight: '700' }}>{reviewCards.length}</h3>
+                </div>
+              </div>
+
+              <div style={{ 
+                display: 'flex', 
+                gap: '12px', 
+                marginTop: '8px',
+                flexWrap: 'wrap',
+                justifyContent: 'center'
+              }}>
+                <button 
+                  type="button" 
+                  className="ss-chip-btn" 
+                  onClick={restartReview}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: '#6366f1',
+                    color: '#fff',
+                    fontWeight: '600'
+                  }}
+                >
+                  Review Again
+                </button>
+                {reviewCards.length > 0 && (
+                  <button 
+                    type="button" 
+                    className="ss-chip-btn" 
+                    onClick={startSmartReview}
+                    style={{
+                      padding: '12px 24px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    <Brain size={16} /> Review Difficult Cards
+                  </button>
+                )}
+              </div>
+            </div>
           ) : (
             <>
               <button

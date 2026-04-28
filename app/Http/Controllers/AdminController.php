@@ -63,10 +63,16 @@ class AdminController extends Controller
                 });
             }
             
+            $perPage = $request->input('per_page', 20);
             $students = $query->orderBy('created_at', 'desc')
-                ->paginate(20);
+                ->paginate($perPage);
 
-            return response()->json($students);
+            return response()->json([
+                'students' => $students->items(),
+                'total' => $students->total(),
+                'current_page' => $students->currentPage(),
+                'per_page' => $students->perPage(),
+            ]);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Failed to fetch students'], 500);
         }
@@ -89,10 +95,16 @@ class AdminController extends Controller
                 });
             }
             
+            $perPage = $request->input('per_page', 20);
             $teachers = $query->orderBy('created_at', 'desc')
-                ->paginate(20);
+                ->paginate($perPage);
 
-            return response()->json($teachers);
+            return response()->json([
+                'teachers' => $teachers->items(),
+                'total' => $teachers->total(),
+                'current_page' => $teachers->currentPage(),
+                'per_page' => $teachers->perPage(),
+            ]);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Failed to fetch teachers'], 500);
         }

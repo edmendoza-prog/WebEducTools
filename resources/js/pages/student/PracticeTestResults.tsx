@@ -96,7 +96,7 @@ export default function PracticeTestResults() {
           <FileText size={48} style={{ color: '#cbd5e1' }} />
           <h3>Results not found</h3>
           <button className="sp-btn-back" onClick={() => navigate('/student-dashboard/practice-tests')}>
-            Back to Practice Tests
+            Back to Tests
           </button>
         </div>
       </StudentLayout>
@@ -112,7 +112,7 @@ export default function PracticeTestResults() {
         <div className="sp-results-header">
           <button className="sp-back-link" onClick={() => navigate('/student-dashboard/practice-tests')}>
             <ArrowLeft size={18} />
-            Back to Practice Tests
+            Back to Tests
           </button>
           <h1 className="sp-page-title">Test Results</h1>
         </div>

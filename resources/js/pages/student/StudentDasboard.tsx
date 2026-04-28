@@ -128,7 +128,7 @@ const navItems: StudentNav[] = [
   { label: 'Dashboard', path: '/student-dashboard', icon: <Home size={18} /> },
   { label: 'Flashcards', path: '/student-dashboard/flashcards', icon: <Layers size={18} /> },
   { label: 'Quiz', path: '/student-dashboard/quiz', icon: <HelpCircle size={18} /> },
-  { label: 'Practice Test', path: '/student-dashboard/practice-tests', icon: <Clock3 size={18} /> },
+  { label: 'Test', path: '/student-dashboard/practice-tests', icon: <Clock3 size={18} /> },
   { label: 'Reports', path: '/student-dashboard/reports', icon: <BarChart3 size={18} /> },
   { label: 'Search & Collaboration', path: '/student-dashboard/library', icon: <Users size={18} /> },
 ];
@@ -1216,7 +1216,7 @@ export default function StudentDasboard() {
       return (
         <section className="ss-panel">
           <div className="ss-panel-head">
-            <h2>Practice Test Mode</h2>
+            <h2>Test Mode</h2>
             <Clock3 size={16} />
           </div>
           <p className="ss-insight">
@@ -1225,7 +1225,7 @@ export default function StudentDasboard() {
               : 'No practice questions available yet.'}
           </p>
           <button type="button" className="ss-chip-btn" onClick={startPracticeTest} disabled={quizQuestions.length === 0}>
-            Start Practice Test
+            Start Test
           </button>
         </section>
       );
@@ -1258,7 +1258,7 @@ export default function StudentDasboard() {
     return (
       <section className="ss-panel">
         <div className="ss-panel-head">
-          <h2>Practice Test In Progress</h2>
+          <h2>Test In Progress</h2>
           <span className="ss-pill">Time left: {practiceTimeLeft}s</span>
         </div>
 

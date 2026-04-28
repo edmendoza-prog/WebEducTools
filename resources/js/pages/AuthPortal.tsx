@@ -15,7 +15,7 @@ type AuthResponse = {
 };
 
 function normalizeRole(value: string | null): Role {
-  return value === 'teacher' ? 'teacher' : 'student';
+  return value === 'teacher' ? 'teacher' : value === 'admin' ? 'admin' : 'student';
 }
 
 function normalizeMode(value: string | null): Mode {
@@ -32,6 +32,8 @@ export default function AuthPortal() {
       ? 'student'
       : location.pathname === '/signup/teacher' || location.pathname === '/login/teacher'
         ? 'teacher'
+        : location.pathname === '/login/admin'
+        ? 'admin'
         : null;
 
   const forcedMode: Mode | null =
@@ -53,12 +55,11 @@ export default function AuthPortal() {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [suggestedLoginPath, setSuggestedLoginPath] = React.useState<string | null>(null);
-  const [activeSheet, setActiveSheet] = React.useState<'s1' | 's2' | 's3' | null>(null);
 
-  const roleLabel = role === 'teacher' ? 'Teacher' : 'Student';
+  const roleLabel = role === 'teacher' ? 'Teacher' : role === 'admin' ? 'Admin' : 'Student';
   const isLogin = mode === 'login';
   const signUpPath = role === 'teacher' ? '/signup/teacher' : '/signup/student';
-  const loginPath = role === 'teacher' ? '/login/teacher' : '/login/student';
+  const loginPath = role === 'teacher' ? '/login/teacher' : role === 'admin' ? '/login/admin' : '/login/student';
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -86,8 +87,8 @@ export default function AuthPortal() {
       if (!response.ok) {
         setError(data.message ?? 'Authentication failed.');
 
-        if (isLogin && response.status === 403 && (data.actual_role === 'student' || data.actual_role === 'teacher')) {
-          setSuggestedLoginPath(data.actual_role === 'teacher' ? '/login/teacher' : '/login/student');
+        if (isLogin && response.status === 403 && (data.actual_role === 'student' || data.actual_role === 'teacher' || data.actual_role === 'admin')) {
+          setSuggestedLoginPath(data.actual_role === 'admin' ? '/login/admin' : data.actual_role === 'teacher' ? '/login/teacher' : '/login/student');
         }
 
         return;
@@ -108,47 +109,12 @@ export default function AuthPortal() {
         <div className="auth-left-gradient" />
         <div className="auth-left-content">
           <h1>{isLogin ? 'Welcome back.' : 'The best way to study.\nSign up for free.'}</h1>
-          <p>{roleLabel} account access for WebEduc.</p>
+          <p>{roleLabel} account access for EduQuest.</p>
         </div>
 
-        <div className={`auth-visual-stack ${activeSheet ? 'is-interacting' : ''}`}>
-          <button
-            className={`auth-sheet s1 ${activeSheet === 's1' ? 'is-active' : ''}`}
-            type="button"
-            aria-label="Show pink card"
-            onClick={() => setActiveSheet((current) => (current === 's1' ? null : 's1'))}
-          >
-            <div className="auth-sheet-content">
-              <p className="auth-sheet-quote">"Education is the most powerful weapon which you can use to change the world."</p>
-              <p className="auth-sheet-credit">— Nelson Mandela</p>
-            </div>
-          </button>
-          <button
-            className={`auth-sheet s2 ${activeSheet === 's2' ? 'is-active' : ''}`}
-            type="button"
-            aria-label="Show orange card"
-            onClick={() => setActiveSheet((current) => (current === 's2' ? null : 's2'))}
-          >
-            <div className="auth-sheet-content">
-              <p className="auth-sheet-quote">"The beautiful thing about learning is that no one can take it away from you."</p>
-              <p className="auth-sheet-credit">— B.B. King</p>
-            </div>
-          </button>
-          <button
-            className={`auth-sheet s3 ${activeSheet === 's3' ? 'is-active' : ''}`}
-            type="button"
-            aria-label="Show teal card"
-            onClick={() => setActiveSheet((current) => (current === 's3' ? null : 's3'))}
-          >
-            <div className="auth-sheet-content">
-              <p className="auth-sheet-quote">"Teaching is the one profession that creates all other professions."</p>
-              <p className="auth-sheet-credit">— Unknown</p>
-            </div>
-          </button>
-          <div className="auth-headset" />
+        <div className="auth-logo-center">
+          <img src="/eduquest-logo.png.png" alt="EduQuest" />
         </div>
-
-        <div className="auth-brand">WebEduc</div>
       </section>
 
       <section className="auth-right">
@@ -157,29 +123,38 @@ export default function AuthPortal() {
         </Link>
 
         <div className={`auth-card ${isLogin ? 'is-login' : 'is-signup'}`}>
-          <div className="auth-top-tabs">
-            <Link
-              to={signUpPath}
-              className={`auth-tab ${!isLogin ? 'is-active' : ''}`}
-            >
-              Sign up
-            </Link>
-            <Link
-              to={loginPath}
-              className={`auth-tab ${isLogin ? 'is-active' : ''}`}
-            >
-              Log in
-            </Link>
-          </div>
+          {role !== 'admin' && (
+            <div className="auth-top-tabs">
+              <Link
+                to={signUpPath}
+                className={`auth-tab ${!isLogin ? 'is-active' : ''}`}
+              >
+                Sign up
+              </Link>
+              <Link
+                to={loginPath}
+                className={`auth-tab ${isLogin ? 'is-active' : ''}`}
+              >
+                Log in
+              </Link>
+            </div>
+          )}
+          
+          {role === 'admin' && (
+            <div className="auth-admin-header">
+              <h2>Admin Login</h2>
+              <p>Enter your administrator credentials</p>
+            </div>
+          )}
 
-          {!isLogin && (
+          {!isLogin && role !== 'admin' && (
             <div className="auth-separator">
               <span>or email</span>
             </div>
           )}
 
           <form className="auth-form" onSubmit={handleSubmit}>
-            {!isLogin && (
+            {!isLogin && role !== 'admin' && (
               <label className="auth-label">
                 <span className="auth-inline-label">
                   Date of birth <CircleHelp size={14} />
@@ -237,7 +212,7 @@ export default function AuthPortal() {
               />
             </label>
 
-            {!isLogin && (
+            {!isLogin && role !== 'admin' && (
               <label className="auth-label">
                 Username
                 <input
@@ -289,12 +264,12 @@ export default function AuthPortal() {
                   required
                 />
                 <span>
-                  I accept WebEduc's <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>
+                  I accept EduQuest's <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>
                 </span>
               </label>
             ) : (
               <p className="auth-terms">
-                By continuing, you accept WebEduc's <a href="#">Terms of Service</a> and{' '}
+                By continuing, you accept EduQuest's <a href="#">Terms of Service</a> and{' '}
                 <a href="#">Privacy Policy</a>.
               </p>
             )}
@@ -303,16 +278,26 @@ export default function AuthPortal() {
               {isLogin ? `Log in as ${roleLabel}` : 'Sign up'}
             </button>
 
-            <Link
-              to={isLogin ? signUpPath : loginPath}
-              className="auth-secondary-btn auth-secondary-link"
-            >
-              {isLogin ? 'New here? Create an account' : 'Already have an account? Log in'}
-            </Link>
+            {role !== 'admin' && (
+              <>
+                <Link
+                  to={isLogin ? signUpPath : loginPath}
+                  className="auth-secondary-btn auth-secondary-link"
+                >
+                  {isLogin ? 'New here? Create an account' : 'Already have an account? Log in'}
+                </Link>
 
-            <button className="auth-magic-link" type="button">
-              Log in with a magic link
-            </button>
+                <button className="auth-magic-link" type="button">
+                  Log in with a magic link
+                </button>
+              </>
+            )}
+            
+            {role === 'admin' && (
+              <Link to="/login/student" className="auth-secondary-btn auth-secondary-link">
+                Not an admin? Go to student login
+              </Link>
+            )}
           </form>
         </div>
       </section>

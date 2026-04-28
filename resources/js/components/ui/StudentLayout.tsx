@@ -28,7 +28,7 @@ const navItems: StudentNav[] = [
   { label: 'Dashboard', path: '/student-dashboard', icon: <Home size={18} /> },
   { label: 'Flashcards', path: '/student-dashboard/flashcards', icon: <Layers size={18} /> },
   { label: 'Quiz', path: '/student-dashboard/quiz', icon: <HelpCircle size={18} /> },
-  { label: 'Practice Test', path: '/student-dashboard/practice-tests', icon: <FileText size={18} /> },
+  { label: 'Test', path: '/student-dashboard/practice-tests', icon: <FileText size={18} /> },
   { label: 'Reports', path: '/student-dashboard/reports', icon: <BarChart3 size={18} /> },
   { label: 'Search & Collaboration', path: '/student-dashboard/library', icon: <Users size={18} /> },
 ];
@@ -285,10 +285,10 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     <div className="ss-page">
       <aside className="ss-sidebar">
         <div className="ss-brand">
-          <div className="ss-brand-mark">SE</div>
-          <div>
-            <p>Student Engine</p>
-            <small>Interactive Learning</small>
+          <img src="/eduquest-logo.png.png" alt="EduQuest" />
+          <div className="ss-brand-text">
+            <p>EduQuest</p>
+            <small>Student Learning</small>
           </div>
         </div>
 

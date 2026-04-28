@@ -88,7 +88,7 @@ export default function Home() {
     },
     {
       id: 4,
-      title: 'Practice Tests',
+      title: 'Tests',
       cssClass: 'bg-orange',
       icon: '✍️',
       content: {
@@ -105,8 +105,7 @@ export default function Home() {
       <header>
         <div className="header-container">
           <div className="logo">
-            <div className="logo-icon">W</div>
-            <span>WebEduc</span>
+            <img src="/eduquest-logo.png.png" alt="EduQuest" className="logo-image" />
           </div>
 
           <nav className="home-nav" ref={navRef}>
@@ -194,7 +193,7 @@ export default function Home() {
             <Search size={18} color="#9ca3af" />
             <input
               type="text"
-              placeholder="Search for practice tests"
+              placeholder="Search for tests"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -226,7 +225,7 @@ export default function Home() {
         <div className="max-width-container">
           <h1>How do you want to study?</h1>
           <p>
-              Master whatever you're learning with WebEduc's interactive flashcards, practice tests and study activities.
+              Master whatever you're learning with WebEduc's interactive flashcards, tests and study activities.
           </p>
           <Link to="/signup" className="btn btn-primary btn-lg">Sign up for free</Link>
           <p>

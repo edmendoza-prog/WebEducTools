@@ -23,16 +23,6 @@ type TeacherStudyGuide = {
   className?: string | null;
 };
 
-type StudySet = {
-  id: string;
-  title: string;
-  subject: string;
-  className: string;
-  visibility: 'public' | 'private';
-  cards: number;
-  updatedAt: string;
-};
-
 type MaterialDraft = {
   title: string;
   subject: string;
@@ -45,7 +35,6 @@ type MaterialDraft = {
 export default function TeacherStudyGuides() {
   const [classes, setClasses] = useState<TeacherClass[]>([]);
   const [studyGuides, setStudyGuides] = useState<TeacherStudyGuide[]>([]);
-  const [studySets, setStudySets] = useState<StudySet[]>([]);
 
   const [isMaterialFormOpen, setIsMaterialFormOpen] = useState(false);
   const [isMaterialCreating, setIsMaterialCreating] = useState(false);
@@ -65,10 +54,9 @@ export default function TeacherStudyGuides() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [classesRes, guidesRes, dashboardRes] = await Promise.all([
+        const [classesRes, guidesRes] = await Promise.all([
           fetch('/api/classes', { method: 'GET', credentials: 'include', headers: { Accept: 'application/json' } }),
           fetch('/api/teacher/study-guides', { method: 'GET', credentials: 'include', headers: { Accept: 'application/json' } }),
-          fetch('/api/teacher/dashboard', { method: 'GET', credentials: 'include', headers: { Accept: 'application/json' } }),
         ]);
 
         if (classesRes.ok) {
@@ -78,10 +66,6 @@ export default function TeacherStudyGuides() {
         if (guidesRes.ok) {
           const payload = (await guidesRes.json()) as { studyGuides?: TeacherStudyGuide[] };
           setStudyGuides(payload.studyGuides ?? []);
-        }
-        if (dashboardRes.ok) {
-          const payload = (await dashboardRes.json()) as { studySets?: StudySet[] };
-          setStudySets(payload.studySets ?? []);
         }
       } catch {
         // Keep empty state if unavailable.
@@ -99,14 +83,7 @@ export default function TeacherStudyGuides() {
   }, [isMaterialFormOpen]);
 
   const refreshMaterials = async () => {
-    const [dashboardRes, guidesRes] = await Promise.all([
-      fetch('/api/teacher/dashboard', { method: 'GET', credentials: 'include', headers: { Accept: 'application/json' } }),
-      fetch('/api/teacher/study-guides', { method: 'GET', credentials: 'include', headers: { Accept: 'application/json' } }),
-    ]);
-    if (dashboardRes.ok) {
-      const p = (await dashboardRes.json()) as { studySets?: StudySet[] };
-      setStudySets(p.studySets ?? []);
-    }
+    const guidesRes = await fetch('/api/teacher/study-guides', { method: 'GET', credentials: 'include', headers: { Accept: 'application/json' } });
     if (guidesRes.ok) {
       const p = (await guidesRes.json()) as { studyGuides?: TeacherStudyGuide[] };
       setStudyGuides(p.studyGuides ?? []);
@@ -179,15 +156,15 @@ export default function TeacherStudyGuides() {
               </button>
             </div>
             <div className="td-stack-list">
-              {studyGuides.length === 0 && studySets.length === 0 ? (
-                <p className="td-empty-state">No study materials yet.</p>
+              {studyGuides.length === 0 ? (
+                <p className="td-empty-state">No lessons uploaded yet.</p>
               ) : (
                 <>
                   {studyGuides.map((guide) => (
                     <article key={`guide-${guide.id}`} className="td-stack-item td-stack-item-column">
                       <div>
                         <h3>{guide.title}</h3>
-                        <p>Study Guide · {guide.subject} {guide.className ? `· ${guide.className}` : ''}</p>
+                        <p>Lesson · {guide.subject} {guide.className ? `· ${guide.className}` : ''}</p>
                       </div>
                       <div className="td-mini-metrics">
                         <span>{guide.updatedAt}</span>
@@ -197,18 +174,6 @@ export default function TeacherStudyGuides() {
                           {guide.uploadType === 'text' && 'Text Content'}
                           {!guide.uploadType && `${guide.content?.length || 0} chars`}
                         </span>
-                      </div>
-                    </article>
-                  ))}
-                  {studySets.map((set) => (
-                    <article key={set.id} className="td-stack-item td-stack-item-column">
-                      <div>
-                        <h3>{set.title}</h3>
-                        <p>{set.subject} · {set.className}</p>
-                      </div>
-                      <div className="td-mini-metrics">
-                        <span>{set.cards} cards</span>
-                        <span>{set.visibility}</span>
                       </div>
                     </article>
                   ))}

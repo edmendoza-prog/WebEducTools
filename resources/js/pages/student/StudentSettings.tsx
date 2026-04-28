@@ -38,7 +38,7 @@ const navItems: NavItem[] = [
   { label: 'Dashboard', path: '/student-dashboard', icon: <Home size={18} /> },
   { label: 'Flashcards', path: '/student-dashboard/flashcards', icon: <Layers size={18} /> },
   { label: 'Quiz', path: '/student-dashboard/quiz', icon: <HelpCircle size={18} /> },
-  { label: 'Practice Test', path: '/student-dashboard/practice-tests', icon: <Clock3 size={18} /> },
+  { label: 'Test', path: '/student-dashboard/practice-tests', icon: <Clock3 size={18} /> },
   { label: 'Reports', path: '/student-dashboard/reports', icon: <BarChart3 size={18} /> },
   { label: 'Search & Collaboration', path: '/student-dashboard/library', icon: <Users size={18} /> },
 ];

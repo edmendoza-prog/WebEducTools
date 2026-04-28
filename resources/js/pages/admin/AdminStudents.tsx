@@ -153,10 +153,6 @@ export default function AdminStudents() {
             <Users size={24} />
             <h1>Student Management</h1>
           </div>
-          <button className="admin-btn-primary" onClick={handleCreateStudent}>
-            <Plus size={18} />
-            Add Student
-          </button>
         </div>
 
         {successMessage && (

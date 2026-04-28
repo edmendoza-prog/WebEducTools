@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { csrfFetch } from '../../lib/csrf';
 import {
   BarChart3,
+  Bell,
   ChevronDown,
   ClipboardCheck,
   FileText,
@@ -27,14 +28,13 @@ const primaryNav: NavItem[] = [
   { label: 'Your library', icon: <FolderClosed size={18} />, path: '/teacher-dashboard/library' },
   { label: 'Classes', icon: <Users size={18} />, path: '/teacher-dashboard/classes' },
   { label: 'Student monitoring', icon: <Users size={18} />, path: '/teacher-dashboard/students' },
-  { label: 'Notifications', icon: <Sparkles size={18} />, path: '/teacher-dashboard/notifications' },
   { label: 'Reports', icon: <BarChart3 size={18} />, path: '/teacher-dashboard/reports' },
 ];
 
 const teacherTools: NavItem[] = [
   { label: 'Create Activity', icon: <ListChecks size={18} />, path: '/teacher-dashboard/assign-activity' },
   { label: 'Study Guides', icon: <FileText size={18} />, path: '/teacher-dashboard/study-guides' },
-  { label: 'Practice Tests', icon: <ClipboardCheck size={18} />, path: '/teacher-dashboard/practice-tests' },
+  { label: 'Tests', icon: <ClipboardCheck size={18} />, path: '/teacher-dashboard/practice-tests' },
 ];
 
 type AuthMeResponse = {
@@ -47,8 +47,10 @@ type AuthMeResponse = {
 
 export default function TeacherLayout({
   children,
+  floatingContent,
 }: {
   children: (search: string) => React.ReactNode;
+  floatingContent?: React.ReactNode;
 }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -57,6 +59,7 @@ export default function TeacherLayout({
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [search, setSearch] = useState('');
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -83,6 +86,34 @@ export default function TeacherLayout({
     };
     loadProfile();
   }, []);
+
+  useEffect(() => {
+    if (!isProfileMenuOpen) {
+      return undefined;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('.td-profile-menu')) {
+        return;
+      }
+      setIsProfileMenuOpen(false);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsProfileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isProfileMenuOpen]);
 
   const profileInitials =
     profileName
@@ -126,9 +157,12 @@ export default function TeacherLayout({
           <button className="td-icon-btn" type="button" aria-label="Open menu">
             <Menu size={22} />
           </button>
-          <div className="td-logo" aria-label="Web Educ Tools">
-            <span>Web Educ</span>
-            <span>Tools</span>
+          <div className="td-logo" aria-label="EduQuest">
+            <img src="/eduquest-logo.png.png" alt="EduQuest" />
+            <div className="td-logo-text">
+              <span className="title">EduQuest</span>
+              <span className="subtitle">Teacher Tools</span>
+            </div>
           </div>
         </div>
 
@@ -161,28 +195,6 @@ export default function TeacherLayout({
             </button>
           ))}
         </nav>
-
-        <button
-          className="td-sidebar-profile"
-          type="button"
-          aria-label="Open profile page"
-          onClick={() => navigate('/teacher-dashboard/profile')}
-        >
-          <div className="td-sidebar-profile-avatar" aria-hidden="true">
-            {profileImageUrl ? (
-              <img className="td-avatar-image" src={profileImageUrl} alt="Teacher profile" />
-            ) : (
-              <span className="td-avatar-initials">{profileInitials}</span>
-            )}
-            <span className="td-avatar-dot" />
-          </div>
-          <div className="td-sidebar-profile-copy">
-            <p className="td-sidebar-profile-label">Profile</p>
-            <strong>{profileName}</strong>
-            <span>{profileEmail}</span>
-          </div>
-          <ChevronDown size={16} className="td-sidebar-profile-chevron" />
-        </button>
       </aside>
 
       <main className="td-main">
@@ -199,19 +211,85 @@ export default function TeacherLayout({
 
           <div className="td-top-actions td-top-actions-teacher">
             <button
-              className="td-inline-action"
+              className="td-icon-btn"
               type="button"
-              onClick={handleLogout}
-              disabled={isLoggingOut}
+              onClick={() => navigate('/teacher-dashboard/notifications')}
+              aria-label="Notifications"
+              title="Notifications"
             >
-              <LogOut size={14} /> {isLoggingOut ? 'Signing out...' : 'Sign out'}
+              <Bell size={18} />
             </button>
+
+            <div className="td-profile-menu">
+              <button
+                type="button"
+                className={`td-avatar-btn ${isProfileMenuOpen ? 'is-open' : ''}`}
+                onClick={() => setIsProfileMenuOpen((current) => !current)}
+                aria-label="Open profile menu"
+              >
+                {profileImageUrl ? (
+                  <img className="td-avatar-image" src={profileImageUrl} alt="Teacher profile" />
+                ) : (
+                  <span className="td-avatar-initials">{profileInitials}</span>
+                )}
+                <span className="td-avatar-dot" />
+              </button>
+
+              {isProfileMenuOpen && (
+                <div className="td-profile-dropdown" onClick={(event) => event.stopPropagation()}>
+                  <div className="td-profile-user">
+                    <div className="td-profile-avatar" aria-hidden="true">
+                      {profileImageUrl ? (
+                        <img className="td-avatar-image" src={profileImageUrl} alt="Teacher profile" />
+                      ) : (
+                        <span>{profileInitials}</span>
+                      )}
+                    </div>
+                    <div>
+                      <p className="td-profile-name">{profileName}</p>
+                      <p className="td-profile-email">{profileEmail}</p>
+                    </div>
+                  </div>
+
+                  <div className="td-profile-group">
+                    <button
+                      type="button"
+                      className="td-profile-item"
+                      onClick={() => {
+                        setIsProfileMenuOpen(false);
+                        navigate('/teacher-dashboard/profile');
+                      }}
+                    >
+                      <Sparkles size={18} />
+                      <span>Profile</span>
+                    </button>
+
+                    <div className="td-profile-divider" />
+
+                    <button
+                      type="button"
+                      className="td-profile-item"
+                      onClick={() => {
+                        setIsProfileMenuOpen(false);
+                        handleLogout();
+                      }}
+                      disabled={isLoggingOut}
+                    >
+                      <LogOut size={18} />
+                      <span>{isLoggingOut ? 'Signing out...' : 'Sign out'}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
         <div className="dashboard-page-transition">
           {children(search)}
         </div>
+        
+        {floatingContent}
       </main>
     </div>
   );

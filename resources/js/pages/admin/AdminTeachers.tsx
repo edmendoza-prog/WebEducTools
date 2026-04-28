@@ -153,10 +153,6 @@ export default function AdminTeachers() {
             <GraduationCap size={24} />
             <h1>Teacher Management</h1>
           </div>
-          <button className="admin-btn-primary" onClick={handleCreateTeacher}>
-            <Plus size={18} />
-            Add Teacher
-          </button>
         </div>
 
         {successMessage && (

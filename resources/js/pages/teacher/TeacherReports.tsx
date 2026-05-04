@@ -211,7 +211,7 @@ export default function TeacherReports() {
                   3. Assign them to students<br />
                   4. Students complete the activities
                 </p>
-                <div style={{ marginTop: '1rem', padding: '0.75rem', background: '#f0f9ff', borderRadius: '8px', fontSize: '0.875rem', color: '#0369a1' }}>
+                <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '8px', fontSize: '0.875rem', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
                   📊 Data is being tracked in real-time. Check back after students submit their work!
                 </div>
               </div>
@@ -220,17 +220,17 @@ export default function TeacherReports() {
                 <div className="tr-chart-container">
                   <ResponsiveContainer width="100%" height={350}>
                     <LineChart data={reportPoints}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                      <XAxis dataKey="label" stroke="#64748b" style={{ fontSize: '0.875rem' }} />
-                      <YAxis domain={[0, 100]} stroke="#64748b" style={{ fontSize: '0.875rem' }} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.2)" />
+                      <XAxis dataKey="label" stroke="#b9c8ff" style={{ fontSize: '0.875rem' }} />
+                      <YAxis domain={[0, 100]} stroke="#b9c8ff" style={{ fontSize: '0.875rem' }} />
                       <Tooltip 
                         contentStyle={{ 
-                          backgroundColor: '#fff', 
-                          border: '1px solid #e2e8f0', 
+                          backgroundColor: '#0a0f3b', 
+                          border: '1px solid rgba(148, 163, 184, 0.3)', 
                           borderRadius: '8px',
-                          boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                          boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.3)'
                         }}
-                        labelStyle={{ color: '#1e293b', fontWeight: 600 }}
+                        labelStyle={{ color: '#dce5ff', fontWeight: 600 }}
                       />
                       <Line type="monotone" dataKey="engagement" stroke="#3b82f6" strokeWidth={3} name="Engagement" />
                       <Line type="monotone" dataKey="completion" stroke="#10b981" strokeWidth={3} name="Completion" />
@@ -284,7 +284,7 @@ export default function TeacherReports() {
                   • Student engagement levels<br />
                   • Individual class breakdowns
                 </p>
-                <div style={{ marginTop: '1rem', padding: '0.75rem', background: '#f0fdf4', borderRadius: '8px', fontSize: '0.875rem', color: '#166534' }}>
+                <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '8px', fontSize: '0.875rem', color: '#6ee7b7', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
                   🎯 The system is actively monitoring all student submissions. Data will appear here shortly after activities are completed!
                 </div>
               </div>

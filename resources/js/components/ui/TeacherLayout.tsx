@@ -24,17 +24,17 @@ type NavItem = {
 };
 
 const primaryNav: NavItem[] = [
-  { label: 'Home', icon: <Home size={18} />, path: '/teacher-dashboard' },
-  { label: 'Your library', icon: <FolderClosed size={18} />, path: '/teacher-dashboard/library' },
+  { label: 'Dashboard', icon: <Home size={18} />, path: '/teacher-dashboard' },
   { label: 'Classes', icon: <Users size={18} />, path: '/teacher-dashboard/classes' },
-  { label: 'Student monitoring', icon: <Users size={18} />, path: '/teacher-dashboard/students' },
+  { label: 'Activity', icon: <ListChecks size={18} />, path: '/teacher-dashboard/assign-activity' },
+  { label: 'Test', icon: <ClipboardCheck size={18} />, path: '/teacher-dashboard/practice-tests' },
   { label: 'Reports', icon: <BarChart3 size={18} />, path: '/teacher-dashboard/reports' },
+  { label: 'Search & Collaboration', icon: <FolderClosed size={18} />, path: '/teacher-dashboard/library' },
 ];
 
 const teacherTools: NavItem[] = [
-  { label: 'Create Activity', icon: <ListChecks size={18} />, path: '/teacher-dashboard/assign-activity' },
   { label: 'Study Guides', icon: <FileText size={18} />, path: '/teacher-dashboard/study-guides' },
-  { label: 'Tests', icon: <ClipboardCheck size={18} />, path: '/teacher-dashboard/practice-tests' },
+  { label: 'Student Monitoring', icon: <Users size={18} />, path: '/teacher-dashboard/students' },
 ];
 
 type AuthMeResponse = {

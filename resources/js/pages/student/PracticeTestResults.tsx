@@ -108,14 +108,16 @@ export default function PracticeTestResults() {
   return (
     <StudentLayout>
       <div className="sp-results-container">
-        {/* Header */}
-        <div className="sp-results-header">
+        {/* Back Button */}
+        <div className="sp-back-button-box">
           <button className="sp-back-link" onClick={() => navigate('/student-dashboard/practice-tests')}>
             <ArrowLeft size={18} />
             Back to Tests
           </button>
-          <h1 className="sp-page-title">Test Results</h1>
         </div>
+        
+        {/* Header */}
+        <h1 className="sp-page-title">Test Results</h1>
 
         {/* Score Card */}
         <div className={`sp-score-card ${isPassing ? 'passing' : 'needs-improvement'}`}>

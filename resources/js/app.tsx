@@ -19,7 +19,7 @@ import TeacherNotificationsPage from './pages/teacher/TeacherNotificationsPage';
 import TeacherReports from './pages/teacher/TeacherReports';
 import TeacherStudyGuides from './pages/teacher/TeacherStudyGuides';
 import TeacherPracticeTests from './pages/teacher/TeacherPracticeTests';
-import CreatePracticeTest from './pages/teacher/CreatePracticeTest';
+import CreatePracticeTest from './pages/teacher/CreateTest';
 import TeacherAssignActivity from './pages/teacher/TeacherAssignActivity';
 import TeacherProfile from './pages/teacher/TeacherProfile';
 import StudentSettings from './pages/student/StudentSettings';

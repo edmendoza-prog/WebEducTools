@@ -26,8 +26,8 @@ type StudentNav = {
 
 const navItems: StudentNav[] = [
   { label: 'Dashboard', path: '/student-dashboard', icon: <Home size={18} /> },
-  { label: 'Flashcards', path: '/student-dashboard/flashcards', icon: <Layers size={18} /> },
-  { label: 'Quiz', path: '/student-dashboard/quiz', icon: <HelpCircle size={18} /> },
+  { label: 'Classes', path: '/student-dashboard/flashcards', icon: <Layers size={18} /> },
+  { label: 'Activity', path: '/student-dashboard/quiz', icon: <HelpCircle size={18} /> },
   { label: 'Test', path: '/student-dashboard/practice-tests', icon: <FileText size={18} /> },
   { label: 'Reports', path: '/student-dashboard/reports', icon: <BarChart3 size={18} /> },
   { label: 'Search & Collaboration', path: '/student-dashboard/library', icon: <Users size={18} /> },
@@ -318,7 +318,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
             {/* Mail */}
             <div className="ss-user-menu-anchor">
               <button type="button" className="ss-quick-action" onClick={openMailMenu} aria-label="Open teacher announcements">
-                <Mail size={14} />
+                <Mail size={18} />
                 {unreadTeacherAnnouncementsCount > 0 && <span className="ss-quick-action-badge">{unreadTeacherAnnouncementsCount}</span>}
               </button>
 
@@ -366,7 +366,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
             {/* Notifications */}
             <div className="ss-user-menu-anchor">
               <button type="button" className="ss-quick-action" onClick={openNotificationsMenu} aria-label="Open quiz notifications">
-                <Bell size={14} />
+                <Bell size={18} />
                 {unreadQuizUploadNotificationsCount > 0 && <span className="ss-quick-action-badge">{unreadQuizUploadNotificationsCount}</span>}
               </button>
 

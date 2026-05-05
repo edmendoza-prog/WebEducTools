@@ -157,7 +157,6 @@ const navItems: StudentNav[] = [
   { label: 'Activity', path: '/student-dashboard/activity', icon: <Brain size={18} /> },
   { label: 'Test', path: '/student-dashboard/practice-tests', icon: <FileText size={18} /> },
   { label: 'Reports', path: '/student-dashboard/reports', icon: <BarChart3 size={18} /> },
-  { label: 'Search & Collaboration', path: '/student-dashboard/library', icon: <Users size={18} /> },
 ];
 
 function shuffleArray<T>(items: T[]): T[] {
@@ -1644,7 +1643,7 @@ export default function StudentDashboard() {
   const renderSearchAndCollab = () => (
     <section className="ss-panel">
       <div className="ss-panel-head">
-        <h2>Search & Collaboration</h2>
+        <h2>Library</h2>
         <Users size={16} />
       </div>
       <p className="ss-insight">Search study sets, browse public materials, and access shared content from your groups.</p>
@@ -1887,7 +1886,6 @@ export default function StudentDashboard() {
         return renderReports();
       case '/student-dashboard/achievements':
         return renderAchievements();
-      case '/student-dashboard/library':
       case '/student-dashboard/study-groups':
       case '/student-dashboard/notifications':
         return renderSearchAndCollab();

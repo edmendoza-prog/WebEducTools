@@ -220,17 +220,17 @@ export default function TeacherReports() {
                 <div className="tr-chart-container">
                   <ResponsiveContainer width="100%" height={350}>
                     <LineChart data={reportPoints}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.2)" />
-                      <XAxis dataKey="label" stroke="#b9c8ff" style={{ fontSize: '0.875rem' }} />
-                      <YAxis domain={[0, 100]} stroke="#b9c8ff" style={{ fontSize: '0.875rem' }} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis dataKey="label" stroke="#475569" style={{ fontSize: '0.875rem' }} />
+                      <YAxis domain={[0, 100]} stroke="#475569" style={{ fontSize: '0.875rem' }} />
                       <Tooltip 
                         contentStyle={{ 
-                          backgroundColor: '#0a0f3b', 
-                          border: '1px solid rgba(148, 163, 184, 0.3)', 
+                          backgroundColor: '#ffffff', 
+                          border: '1px solid #e2e8f0', 
                           borderRadius: '8px',
-                          boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.3)'
+                          boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
                         }}
-                        labelStyle={{ color: '#dce5ff', fontWeight: 600 }}
+                        labelStyle={{ color: '#1e293b', fontWeight: 600 }}
                       />
                       <Line type="monotone" dataKey="engagement" stroke="#3b82f6" strokeWidth={3} name="Engagement" />
                       <Line type="monotone" dataKey="completion" stroke="#10b981" strokeWidth={3} name="Completion" />

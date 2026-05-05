@@ -9,7 +9,6 @@ import StudentPracticeTest from './pages/student/StudentPracticeTest';
 import TakePracticeTest from './pages/student/TakePracticeTest';
 import PracticeTestResults from './pages/student/PracticeTestResults';
 import StudentReports from './pages/student/StudentReports';
-import StudentSearchCollab from './pages/student/StudentSearchCollab';
 import StudentActivityAnswer from './pages/student/StudentActivityAnswer';
 import TeacherDashboard from './pages/teacher/TeacherDashboard';
 import TeacherLibrary from './pages/teacher/TeacherLibrary';
@@ -218,6 +217,7 @@ function AnimatedRoutes() {
         <Route path="/teacher-dashboard/study-guides" element={teacherGuard(<TeacherStudyGuides />)} />
         <Route path="/teacher-dashboard/practice-tests" element={teacherGuard(<TeacherPracticeTests />)} />
         <Route path="/teacher-dashboard/practice-tests/create" element={teacherGuard(<CreatePracticeTest />)} />
+        <Route path="/teacher-dashboard/practice-tests/edit/:id" element={teacherGuard(<CreatePracticeTest />)} />
         <Route path="/teacher-dashboard/reports" element={teacherGuard(<TeacherReports />)} />
         <Route path="/teacher-dashboard/profile" element={teacherGuard(<TeacherProfile />)} />
       </Routes>

@@ -29,7 +29,7 @@ const primaryNav: NavItem[] = [
   { label: 'Activity', icon: <ListChecks size={18} />, path: '/teacher-dashboard/assign-activity' },
   { label: 'Test', icon: <ClipboardCheck size={18} />, path: '/teacher-dashboard/practice-tests' },
   { label: 'Reports', icon: <BarChart3 size={18} />, path: '/teacher-dashboard/reports' },
-  { label: 'Search & Collaboration', icon: <FolderClosed size={18} />, path: '/teacher-dashboard/library' },
+  { label: 'Library', icon: <FolderClosed size={18} />, path: '/teacher-dashboard/library' },
 ];
 
 const teacherTools: NavItem[] = [

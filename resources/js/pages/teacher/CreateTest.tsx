@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import TeacherLayout from '../../components/ui/TeacherLayout';
 import { csrfFetch } from '../../lib/csrf';
 import {
@@ -47,6 +47,8 @@ type GenerationSource = 'manual' | 'pdf' | 'powerpoint' | 'text';
 
 export default function CreatePracticeTest() {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const isEditMode = Boolean(id);
 
   // Basic test info
   const [testTitle, setTestTitle] = useState('');
@@ -54,9 +56,11 @@ export default function CreatePracticeTest() {
   const [className, setClassName] = useState('');
   const [duration, setDuration] = useState(60);
   const [instructions, setInstructions] = useState('');
+  const [isLoadingTest, setIsLoadingTest] = useState(false);
 
   // Questions
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [selectedQuestionTypes, setSelectedQuestionTypes] = useState<QuestionType[]>(['multiple_choice']);
   const [currentQuestionType, setCurrentQuestionType] = useState<QuestionType>('multiple_choice');
 
   // Generation mode
@@ -80,6 +84,46 @@ export default function CreatePracticeTest() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
 
+  // Sync currentQuestionType with selectedQuestionTypes
+  useEffect(() => {
+    if (!selectedQuestionTypes.includes(currentQuestionType)) {
+      setCurrentQuestionType(selectedQuestionTypes[0]);
+    }
+  }, [selectedQuestionTypes, currentQuestionType]);
+
+  // Load test data if editing
+  useEffect(() => {
+    if (isEditMode && id) {
+      const loadTest = async () => {
+        setIsLoadingTest(true);
+        try {
+          const response = await csrfFetch(`/api/teacher/practice-tests/${id}`);
+          if (response.ok) {
+            const data = await response.json();
+            const test = data.test;
+            
+            setTestTitle(test.title);
+            setSubject(test.subject);
+            setClassName(test.className || '');
+            setDuration(test.duration);
+            setInstructions(test.instructions || '');
+            setQuestions(test.questions || []);
+          } else {
+            console.error('Failed to load test');
+            navigate('/teacher-dashboard/practice-tests');
+          }
+        } catch (error) {
+          console.error('Error loading test:', error);
+          navigate('/teacher-dashboard/practice-tests');
+        } finally {
+          setIsLoadingTest(false);
+        }
+      };
+      
+      loadTest();
+    }
+  }, [isEditMode, id, navigate]);
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -97,13 +141,35 @@ export default function CreatePracticeTest() {
     }
   };
 
+  const toggleQuestionType = (type: QuestionType) => {
+    setSelectedQuestionTypes(prev => {
+      if (prev.includes(type)) {
+        // Don't allow deselecting if it's the last one
+        if (prev.length === 1) return prev;
+        return prev.filter(t => t !== type);
+      } else {
+        return [...prev, type];
+      }
+    });
+  };
+
+  const toggleSelectAllTypes = () => {
+    const allTypes: QuestionType[] = ['multiple_choice', 'true_false', 'identification'];
+    if (selectedQuestionTypes.length === allTypes.length) {
+      // Keep at least one selected
+      setSelectedQuestionTypes(['multiple_choice']);
+    } else {
+      setSelectedQuestionTypes(allTypes);
+    }
+  };
+
   const handleGenerateQuestions = async () => {
     setIsGenerating(true);
     setGenerationError('');
 
     try {
       const formData = new FormData();
-      formData.append('questionType', currentQuestionType);
+      formData.append('questionTypes', JSON.stringify(selectedQuestionTypes));
       formData.append('source', generationMode);
       formData.append('questionCount', questionCount.toString());
 
@@ -212,8 +278,11 @@ export default function CreatePracticeTest() {
     setSaveError('');
 
     try {
-      const response = await csrfFetch('/api/teacher/practice-tests', {
-        method: 'POST',
+      const url = isEditMode ? `/api/teacher/practice-tests/${id}` : '/api/teacher/practice-tests';
+      const method = isEditMode ? 'PUT' : 'POST';
+      
+      const response = await csrfFetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: testTitle,
@@ -226,12 +295,12 @@ export default function CreatePracticeTest() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save test');
+        throw new Error(`Failed to ${isEditMode ? 'update' : 'save'} test`);
       }
 
       navigate('/teacher-dashboard/practice-tests');
     } catch (error) {
-      setSaveError('Failed to save test. Please try again.');
+      setSaveError(`Failed to ${isEditMode ? 'update' : 'save'} test. Please try again.`);
     } finally {
       setIsSaving(false);
     }
@@ -243,17 +312,23 @@ export default function CreatePracticeTest() {
     <TeacherLayout>
       {() => (
         <div className="td-create-test-container">
-          {/* Header */}
-          <div className="td-create-test-header">
-            <button className="td-back-btn" onClick={() => navigate('/teacher-dashboard/practice-tests')}>
-              <ArrowLeft size={20} />
-              Back to Tests
-            </button>
-            <div>
-              <h1 className="td-page-title">Create Test</h1>
-              <p className="td-page-subtitle">Build assessments with multiple question types and AI generation</p>
+          {isLoadingTest ? (
+            <div style={{ padding: '3rem', textAlign: 'center' }}>
+              <p>Loading test...</p>
             </div>
-          </div>
+          ) : (
+            <>
+              {/* Header */}
+              <div className="td-create-test-header">
+                <button className="td-back-btn" onClick={() => navigate('/teacher-dashboard/practice-tests')}>
+                  <ArrowLeft size={20} />
+                  Back to Tests
+                </button>
+                <div>
+                  <h1 className="td-page-title">{isEditMode ? 'Edit Test' : 'Create Test'}</h1>
+                  <p className="td-page-subtitle">Build assessments with multiple question types and AI generation</p>
+                </div>
+              </div>
 
           <div className="td-create-test-layout">
             {/* Left Panel - Test Setup */}
@@ -334,24 +409,45 @@ export default function CreatePracticeTest() {
                 <div className="td-card-body">
                   {/* Question Type Selection */}
                   <div className="td-question-type-selector">
-                    <label className="td-label-text">Question Type</label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <label className="td-label-text">Question Types (Select one or more)</label>
+                      <button
+                        className="td-select-all-btn"
+                        onClick={toggleSelectAllTypes}
+                        style={{
+                          padding: '0.25rem 0.75rem',
+                          fontSize: '0.875rem',
+                          borderRadius: '0.375rem',
+                          border: '1px solid #e5e7eb',
+                          background: selectedQuestionTypes.length === 3 ? '#2563eb' : 'white',
+                          color: selectedQuestionTypes.length === 3 ? 'white' : '#374151',
+                          cursor: 'pointer',
+                          fontWeight: '500',
+                        }}
+                      >
+                        {selectedQuestionTypes.length === 3 ? '✓ All Selected' : 'Select All'}
+                      </button>
+                    </div>
                     <div className="td-type-buttons">
                       <button
-                        className={`td-type-btn ${currentQuestionType === 'multiple_choice' ? 'active' : ''}`}
-                        onClick={() => setCurrentQuestionType('multiple_choice')}
+                        className={`td-type-btn ${selectedQuestionTypes.includes('multiple_choice') ? 'active' : ''}`}
+                        onClick={() => toggleQuestionType('multiple_choice')}
                       >
+                        {selectedQuestionTypes.includes('multiple_choice') && '✓ '}
                         Multiple Choice
                       </button>
                       <button
-                        className={`td-type-btn ${currentQuestionType === 'true_false' ? 'active' : ''}`}
-                        onClick={() => setCurrentQuestionType('true_false')}
+                        className={`td-type-btn ${selectedQuestionTypes.includes('true_false') ? 'active' : ''}`}
+                        onClick={() => toggleQuestionType('true_false')}
                       >
+                        {selectedQuestionTypes.includes('true_false') && '✓ '}
                         True or False
                       </button>
                       <button
-                        className={`td-type-btn ${currentQuestionType === 'identification' ? 'active' : ''}`}
-                        onClick={() => setCurrentQuestionType('identification')}
+                        className={`td-type-btn ${selectedQuestionTypes.includes('identification') ? 'active' : ''}`}
+                        onClick={() => toggleQuestionType('identification')}
                       >
+                        {selectedQuestionTypes.includes('identification') && '✓ '}
                         Identification
                       </button>
                     </div>
@@ -402,6 +498,29 @@ export default function CreatePracticeTest() {
                         </button>
                       ) : (
                         <div className="td-question-form">
+                          {/* Question Type Selector for Manual Entry */}
+                          {selectedQuestionTypes.length > 1 && (
+                            <label>
+                              <span className="td-label-text">Select Question Type to Create</span>
+                              <select
+                                value={currentQuestionType}
+                                onChange={(e) => setCurrentQuestionType(e.target.value as QuestionType)}
+                                className="td-input"
+                                style={{ marginBottom: '1rem' }}
+                              >
+                                {selectedQuestionTypes.includes('multiple_choice') && (
+                                  <option value="multiple_choice">Multiple Choice</option>
+                                )}
+                                {selectedQuestionTypes.includes('true_false') && (
+                                  <option value="true_false">True or False</option>
+                                )}
+                                {selectedQuestionTypes.includes('identification') && (
+                                  <option value="identification">Identification</option>
+                                )}
+                              </select>
+                            </label>
+                          )}
+                          
                           <label>
                             <span className="td-label-text">Question</span>
                             <textarea
@@ -534,6 +653,14 @@ export default function CreatePracticeTest() {
                           className="td-input"
                         />
                       </label>
+                      {selectedQuestionTypes.length > 1 && (
+                        <p style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.5rem' }}>
+                          💡 AI will generate questions for all selected types: {selectedQuestionTypes.map(t => 
+                            t === 'multiple_choice' ? 'Multiple Choice' : 
+                            t === 'true_false' ? 'True/False' : 'Identification'
+                          ).join(', ')}
+                        </p>
+                      )}
                       <button
                         className="td-btn-generate"
                         onClick={handleGenerateQuestions}
@@ -569,6 +696,14 @@ export default function CreatePracticeTest() {
                           className="td-input"
                         />
                       </label>
+                      {selectedQuestionTypes.length > 1 && (
+                        <p style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.5rem' }}>
+                          💡 AI will generate questions for all selected types: {selectedQuestionTypes.map(t => 
+                            t === 'multiple_choice' ? 'Multiple Choice' : 
+                            t === 'true_false' ? 'True/False' : 'Identification'
+                          ).join(', ')}
+                        </p>
+                      )}
                       <button
                         className="td-btn-generate"
                         onClick={handleGenerateQuestions}
@@ -666,12 +801,14 @@ export default function CreatePracticeTest() {
                     onClick={handleSavePracticeTest}
                     disabled={isSaving || questions.length === 0}
                   >
-                    {isSaving ? 'Saving...' : 'Save Test'}
+                    {isSaving ? (isEditMode ? 'Updating...' : 'Saving...') : (isEditMode ? 'Update Test' : 'Save Test')}
                   </button>
                 </div>
               </div>
             </div>
           </div>
+            </>
+          )}
         </div>
       )}
     </TeacherLayout>

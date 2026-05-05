@@ -167,8 +167,8 @@ export default function TeacherLibrary() {
             {/* Header */}
             <div className="td-library-header">
               <div>
-                <h2 style={{ margin: 0, fontSize: '1.5rem', color: '#f4f7ff' }}>Your Library</h2>
-                <p style={{ margin: '0.25rem 0 0', fontSize: '0.875rem', color: '#b9c8ff' }}>
+                <h2 style={{ margin: 0, fontSize: '1.5rem', color: '#1e293b' }}>Your Library</h2>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.875rem', color: '#64748b' }}>
                   {studySets.length} study {studySets.length === 1 ? 'set' : 'sets'}
                 </p>
               </div>
@@ -178,7 +178,7 @@ export default function TeacherLibrary() {
                   className="td-inline-action"
                   type="button"
                   onClick={() => setShowFilters(!showFilters)}
-                  style={{ background: showFilters ? 'rgba(118, 120, 237, 0.15)' : 'rgba(30, 41, 90, 0.3)', color: showFilters ? '#c5c7ff' : '#b9c8ff' }}
+                  style={{ background: showFilters ? '#e0e7ff' : 'transparent', color: '#000000', border: '1px solid #e2e8f0' }}
                 >
                   <Filter size={14} /> Filters
                 </button>
@@ -189,11 +189,11 @@ export default function TeacherLibrary() {
             {showFilters && (
               <div className="td-library-filters">
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.5rem', color: '#dce5ff' }}>Subject</label>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.5rem', color: '#1e293b' }}>Subject</label>
                   <select
                     value={filters.subject}
                     onChange={(e) => setFilters({ ...filters, subject: e.target.value })}
-                    style={{ width: '100%', padding: '0.5rem', border: '1px solid rgba(148, 163, 184, 0.2)', borderRadius: '6px', background: 'rgba(30, 41, 90, 0.3)', color: '#eef1ff' }}
+                    style={{ width: '100%', padding: '0.5rem', border: '1px solid #e2e8f0', borderRadius: '6px', background: '#ffffff', color: '#1e293b' }}
                   >
                     <option value="">All subjects</option>
                     {getUniqueValues('subject').map((subject) => (
@@ -205,11 +205,11 @@ export default function TeacherLibrary() {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.5rem', color: '#dce5ff' }}>Class</label>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.5rem', color: '#1e293b' }}>Class</label>
                   <select
                     value={filters.className}
                     onChange={(e) => setFilters({ ...filters, className: e.target.value })}
-                    style={{ width: '100%', padding: '0.5rem', border: '1px solid rgba(148, 163, 184, 0.2)', borderRadius: '6px', background: 'rgba(30, 41, 90, 0.3)', color: '#eef1ff' }}
+                    style={{ width: '100%', padding: '0.5rem', border: '1px solid #e2e8f0', borderRadius: '6px', background: '#ffffff', color: '#1e293b' }}
                   >
                     <option value="">All classes</option>
                     {getUniqueValues('className').map((className) => (
@@ -221,11 +221,11 @@ export default function TeacherLibrary() {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.5rem', color: '#dce5ff' }}>Visibility</label>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.5rem', color: '#1e293b' }}>Visibility</label>
                   <select
                     value={filters.visibility}
                     onChange={(e) => setFilters({ ...filters, visibility: e.target.value })}
-                    style={{ width: '100%', padding: '0.5rem', border: '1px solid rgba(148, 163, 184, 0.2)', borderRadius: '6px', background: 'rgba(30, 41, 90, 0.3)', color: '#eef1ff' }}
+                    style={{ width: '100%', padding: '0.5rem', border: '1px solid #e2e8f0', borderRadius: '6px', background: '#ffffff', color: '#1e293b' }}
                   >
                     <option value="">All</option>
                     <option value="public">Public</option>
@@ -234,11 +234,11 @@ export default function TeacherLibrary() {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.5rem', color: '#dce5ff' }}>Sort by</label>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.5rem', color: '#1e293b' }}>Sort by</label>
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as SortOption)}
-                    style={{ width: '100%', padding: '0.5rem', border: '1px solid rgba(148, 163, 184, 0.2)', borderRadius: '6px', background: 'rgba(30, 41, 90, 0.3)', color: '#eef1ff' }}
+                    style={{ width: '100%', padding: '0.5rem', border: '1px solid #e2e8f0', borderRadius: '6px', background: '#ffffff', color: '#1e293b' }}
                   >
                     <option value="newest">Newest first</option>
                     <option value="oldest">Oldest first</option>
@@ -253,14 +253,14 @@ export default function TeacherLibrary() {
 
             {/* Cards Grid */}
             {isLoading ? (
-              <div style={{ textAlign: 'center', padding: '3rem', color: '#9fb0ff' }}>
+              <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
                 <p>Loading your library...</p>
               </div>
             ) : sorted.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '3rem' }}>
-                <BookOpen size={48} style={{ color: '#7678ed', margin: '0 auto 1rem' }} />
-                <h3 style={{ margin: 0, color: '#dce5ff', fontSize: '1.125rem' }}>No study sets found</h3>
-                <p style={{ margin: '0.5rem 0 1.5rem', color: '#9fb0ff' }}>
+                <BookOpen size={48} style={{ color: '#6366f1', margin: '0 auto 1rem' }} />
+                <h3 style={{ margin: 0, color: '#1e293b', fontSize: '1.125rem' }}>No study sets found</h3>
+                <p style={{ margin: '0.5rem 0 1.5rem', color: '#64748b' }}>
                   {search || filters.subject || filters.className || filters.visibility
                     ? 'Try adjusting your filters or search'
                     : 'Create your first study set to get started'}
@@ -270,7 +270,7 @@ export default function TeacherLibrary() {
                     className="td-inline-action"
                     type="button"
                     onClick={() => navigate('/teacher-dashboard/create-content')}
-                    style={{ background: '#7678ed', color: 'white' }}
+                    style={{ background: '#6366f1', color: 'white' }}
                   >
                     <Plus size={14} /> Create study set
                   </button>
@@ -282,12 +282,12 @@ export default function TeacherLibrary() {
                   <div key={set.id} className="td-library-card">
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                       <div style={{ flex: 1 }}>
-                        <h3 style={{ margin: 0, fontSize: '1.125rem', color: '#eef1ff', fontWeight: 600 }}>{set.title}</h3>
+                        <h3 style={{ margin: 0, fontSize: '1.125rem', color: '#1e293b', fontWeight: 600 }}>{set.title}</h3>
                         <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', background: 'rgba(118, 120, 237, 0.15)', color: '#b9c8ff', border: '1px solid rgba(118, 120, 237, 0.3)', borderRadius: '4px' }}>
+                          <span style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', background: '#eef2ff', color: '#4338ca', border: '1px solid #c7d2fe', borderRadius: '4px' }}>
                             {set.subject}
                           </span>
-                          <span style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', background: 'rgba(30, 41, 90, 0.5)', color: '#b9c8ff', border: '1px solid rgba(148, 163, 184, 0.15)', borderRadius: '4px' }}>
+                          <span style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', background: '#f1f5f9', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: '4px' }}>
                             {set.className}
                           </span>
                         </div>
@@ -302,9 +302,9 @@ export default function TeacherLibrary() {
                             background: 'transparent',
                             cursor: 'pointer',
                             borderRadius: '4px',
-                            color: '#b9c8ff',
+                            color: '#64748b',
                           }}
-                          onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(30, 41, 90, 0.5)')}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = '#f1f5f9')}
                           onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                         >
                           <MoreVertical size={18} />
@@ -316,10 +316,10 @@ export default function TeacherLibrary() {
                               position: 'absolute',
                               top: '100%',
                               right: 0,
-                              background: '#0a0f3b',
-                              border: '1px solid rgba(148, 163, 184, 0.3)',
+                              background: '#ffffff',
+                              border: '1px solid #e2e8f0',
                               borderRadius: '8px',
-                              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
                               minWidth: '160px',
                               zIndex: 10,
                               marginTop: '0.25rem',
@@ -338,9 +338,9 @@ export default function TeacherLibrary() {
                                 alignItems: 'center',
                                 gap: '0.5rem',
                                 fontSize: '0.875rem',
-                                color: '#dce5ff',
+                                color: '#1e293b',
                               }}
-                              onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(30, 41, 90, 0.5)')}
+                              onMouseEnter={(e) => (e.currentTarget.style.background = '#f1f5f9')}
                               onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
                             >
                               <Edit2 size={14} /> Edit
@@ -362,7 +362,7 @@ export default function TeacherLibrary() {
                                 gap: '0.5rem',
                                 fontSize: '0.875rem',
                                 color: '#f87171',
-                                borderTop: '1px solid rgba(148, 163, 184, 0.2)',
+                                borderTop: '1px solid #e2e8f0',
                               }}
                               onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)')}
                               onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
@@ -374,12 +374,12 @@ export default function TeacherLibrary() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(148, 163, 184, 0.15)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.875rem', color: '#b9c8ff' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid #e2e8f0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.875rem', color: '#64748b' }}>
                         <BookOpen size={14} />
                         <span>{set.cards} cards</span>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.875rem', color: '#b9c8ff' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.875rem', color: '#64748b' }}>
                         {set.visibility === 'public' ? <Eye size={14} /> : <EyeOff size={14} />}
                         <span>{set.visibility}</span>
                       </div>

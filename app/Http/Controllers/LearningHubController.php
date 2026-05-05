@@ -474,13 +474,17 @@ class LearningHubController extends Controller
             ->all();
     }
 
-    private function teacherBadgeProgress(): array
+    private function teacherBadgeProgress(int $teacherId): array
     {
         return DB::table('student_achievements')
             ->join('achievements', 'achievements.id', '=', 'student_achievements.achievement_id')
             ->join('users', 'users.id', '=', 'student_achievements.student_id')
+            ->join('class_students', 'class_students.student_id', '=', 'users.id')
+            ->join('classes', 'classes.id', '=', 'class_students.class_id')
+            ->where('classes.teacher_id', $teacherId)
             ->whereNotIn('achievements.code', ['flashcard-master', 'quiz-champion', 'study-streak', 'perfect-score'])
             ->select('student_achievements.id', 'achievements.name as badge', 'users.name as student', 'student_achievements.progress', 'achievements.target_value as target', 'achievements.description')
+            ->distinct()
             ->limit(12)
             ->get()
             ->map(function ($row) {
@@ -600,7 +604,7 @@ class LearningHubController extends Controller
             'activities' => $this->teacherActivities($teacherId),
             'reportPoints' => $this->teacherReportPoints($teacherId),
             'classMetrics' => $classMetrics,
-            'badgeProgress' => $this->teacherBadgeProgress(),
+            'badgeProgress' => $this->teacherBadgeProgress($teacherId),
             'difficultQuestions' => $this->teacherDifficultQuestions($teacherId),
         ];
     }
@@ -1110,65 +1114,85 @@ class LearningHubController extends Controller
             ];
         })->values();
 
-        if ($recentSets->isEmpty()) {
-            $recentSets = collect([
-                ['id' => 'set-1', 'title' => 'Biology: Cell Structure', 'cards' => 28, 'updatedAt' => '1 hour ago', 'owner' => 'Public Group'],
-                ['id' => 'set-2', 'title' => 'Philippine Constitution Basics', 'cards' => 42, 'updatedAt' => 'Yesterday', 'owner' => 'Teacher Ana'],
-            ]);
-        }
-
         $progressRows = DB::table('student_progress')
             ->where('student_id', $studentId)
             ->orderByDesc('updated_at')
             ->get();
 
-        $progressPercent = (int) round($progressRows->avg('completion_rate') ?? 72);
-        $completionRate = (int) round($progressRows->avg('completion_rate') ?? 64);
-        $studyStreak = (int) round($progressRows->max('streak_days') ?? 9);
+        $progressPercent = (int) round($progressRows->avg('completion_rate') ?? 0);
+        $completionRate = (int) round($progressRows->avg('completion_rate') ?? 0);
+        $studyStreak = (int) round($progressRows->max('streak_days') ?? 0);
 
         $sessionLogs = $progressRows->take(6)->map(function ($row, int $index) {
             return [
                 'id' => 's-'.($index + 1),
                 'date' => optional($row->updated_at)?->toDateString() ?? now()->toDateString(),
-                'minutes' => (int) ($row->study_minutes ?? 40),
+                'minutes' => (int) ($row->study_minutes ?? 0),
                 'topic' => $row->weak_area ?: 'General Study',
-                'score' => (int) ($row->last_score ?? 80),
+                'score' => (int) ($row->last_score ?? 0),
             ];
         })->values();
 
-        if ($sessionLogs->isEmpty()) {
-            $sessionLogs = collect([
-                ['id' => 's-1', 'date' => now()->subDays(2)->toDateString(), 'minutes' => 45, 'topic' => 'Biology', 'score' => 88],
-                ['id' => 's-2', 'date' => now()->subDay()->toDateString(), 'minutes' => 35, 'topic' => 'Economics', 'score' => 76],
-            ]);
-        }
+        // Get actual subject performance from quiz attempts
+        $quizAttempts = DB::table('quiz_attempts')
+            ->join('quiz_questions', 'quiz_attempts.question_id', '=', 'quiz_questions.id')
+            ->where('quiz_attempts.student_id', $studentId)
+            ->select('quiz_questions.subject', DB::raw('AVG(CASE WHEN quiz_attempts.is_correct THEN 100 ELSE 0 END) as score'))
+            ->groupBy('quiz_questions.subject')
+            ->get();
 
-        $subjectPerformance = collect([
-            ['subject' => 'Biology', 'score' => 88],
-            ['subject' => 'Mathematics', 'score' => 91],
-            ['subject' => 'Economics', 'score' => 72],
-            ['subject' => 'Civics', 'score' => 84],
-        ]);
+        $subjectPerformance = $quizAttempts->map(function ($row) {
+            return [
+                'subject' => $row->subject ?? 'General',
+                'score' => (int) round($row->score ?? 0),
+            ];
+        });
+
+        // Get weekly scores from actual activity
+        $weeklyScores = DB::table('quiz_attempts')
+            ->where('student_id', $studentId)
+            ->where('created_at', '>=', now()->subDays(7))
+            ->select(
+                DB::raw('DAYNAME(created_at) as day'),
+                DB::raw('AVG(CASE WHEN is_correct THEN 100 ELSE 0 END) as score')
+            )
+            ->groupBy('day')
+            ->get();
+
+        $weeklyScoresData = collect(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])->map(function ($day) use ($weeklyScores) {
+            $dayData = $weeklyScores->firstWhere('day', $day);
+            return [
+                'day' => $day,
+                'score' => $dayData ? (int) round($dayData->score) : 0,
+            ];
+        });
+
+        // Get weekly progress from actual completions
+        $weeklyProgress = DB::table('student_progress')
+            ->where('student_id', $studentId)
+            ->where('updated_at', '>=', now()->subWeeks(4))
+            ->select(
+                DB::raw('WEEK(updated_at) - WEEK(NOW()) + 5 as week_num'),
+                DB::raw('COUNT(*) as completed')
+            )
+            ->groupBy('week_num')
+            ->orderBy('week_num')
+            ->get();
+
+        $weeklyProgressData = collect(range(1, 4))->map(function ($weekNum) use ($weeklyProgress) {
+            $weekData = $weeklyProgress->firstWhere('week_num', $weekNum);
+            return [
+                'week' => 'W' . $weekNum,
+                'completed' => $weekData ? (int) $weekData->completed : 0,
+            ];
+        });
 
         return response()->json([
             'progressPercent' => $progressPercent,
             'completionRate' => $completionRate,
             'studyStreak' => $studyStreak,
-            'weeklyScores' => [
-                ['day' => 'Mon', 'score' => 78],
-                ['day' => 'Tue', 'score' => 82],
-                ['day' => 'Wed', 'score' => 86],
-                ['day' => 'Thu', 'score' => 79],
-                ['day' => 'Fri', 'score' => 90],
-                ['day' => 'Sat', 'score' => 92],
-                ['day' => 'Sun', 'score' => 88],
-            ],
-            'weeklyProgress' => [
-                ['week' => 'W1', 'completed' => 28],
-                ['week' => 'W2', 'completed' => 36],
-                ['week' => 'W3', 'completed' => 44],
-                ['week' => 'W4', 'completed' => 58],
-            ],
+            'weeklyScores' => $weeklyScoresData,
+            'weeklyProgress' => $weeklyProgressData,
             'recentSets' => $recentSets,
             'sessionLogs' => $sessionLogs,
             'subjectPerformance' => $subjectPerformance,

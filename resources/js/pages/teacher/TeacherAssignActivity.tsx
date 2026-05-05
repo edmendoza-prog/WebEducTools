@@ -486,19 +486,19 @@ export default function TeacherAssignActivity() {
                 onClick={(e) => e.stopPropagation()}
                 style={{ 
                   maxWidth: '600px',
-                  backgroundColor: '#0f1729',
-                  border: '1px solid rgba(99, 102, 241, 0.2)',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #e2e8f0',
                   borderRadius: '12px',
-                  boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
+                  boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15)'
                 }}
               >
                 <section className="td-badge-modal" style={{ padding: '32px' }}>
                   <div className="td-badge-modal-head" style={{ marginBottom: '24px', borderBottom: 'none', paddingBottom: '0' }}>
                     <div>
-                      <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#fff', marginBottom: '8px' }}>
+                      <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#1e293b', marginBottom: '8px' }}>
                         {editingFlashcard ? 'Edit Flashcard' : 'New Flashcard'}
                       </h2>
-                      <p style={{ fontSize: '14px', color: '#94a3b8' }}>Create a flashcard with term and definition.</p>
+                      <p style={{ fontSize: '14px', color: '#64748b' }}>Create a flashcard with term and definition.</p>
                     </div>
                     <button 
                       className="tcc-inline-icon" 
@@ -514,7 +514,7 @@ export default function TeacherAssignActivity() {
                         borderRadius: '6px',
                         backgroundColor: 'transparent',
                         border: 'none',
-                        color: '#94a3b8',
+                        color: '#64748b',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
@@ -522,12 +522,12 @@ export default function TeacherAssignActivity() {
                         transition: 'all 0.2s'
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.1)';
-                        e.currentTarget.style.color = '#fff';
+                        e.currentTarget.style.backgroundColor = '#e0e7ff';
+                        e.currentTarget.style.color = '#4f46e5';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.backgroundColor = 'transparent';
-                        e.currentTarget.style.color = '#94a3b8';
+                        e.currentTarget.style.color = '#64748b';
                       }}
                     >
                       <X size={18} />
@@ -536,7 +536,7 @@ export default function TeacherAssignActivity() {
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <label style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <span style={{ fontSize: '14px', fontWeight: '600', color: '#fff' }}>Term</span>
+                      <span style={{ fontSize: '14px', fontWeight: '600', color: '#1e293b' }}>Term</span>
                       <input 
                         value={draftFlashcard.term} 
                         onChange={(e) => setDraftFlashcard({ ...draftFlashcard, term: e.target.value })} 
@@ -544,10 +544,10 @@ export default function TeacherAssignActivity() {
                         placeholder="Enter term"
                         style={{
                           padding: '12px 16px',
-                          backgroundColor: '#1e293b',
-                          border: '1px solid #334155',
+                          backgroundColor: '#ffffff',
+                          border: '1px solid #e2e8f0',
                           borderRadius: '8px',
-                          color: '#fff',
+                          color: '#1e293b',
                           fontSize: '14px',
                           outline: 'none',
                           transition: 'all 0.2s'
@@ -557,14 +557,14 @@ export default function TeacherAssignActivity() {
                           e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
                         }}
                         onBlur={(e) => {
-                          e.currentTarget.style.borderColor = '#334155';
+                          e.currentTarget.style.borderColor = '#e2e8f0';
                           e.currentTarget.style.boxShadow = 'none';
                         }}
                       />
                     </label>
 
                     <label style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <span style={{ fontSize: '14px', fontWeight: '600', color: '#fff' }}>Definition</span>
+                      <span style={{ fontSize: '14px', fontWeight: '600', color: '#1e293b' }}>Definition</span>
                       <textarea 
                         value={draftFlashcard.definition} 
                         onChange={(e) => setDraftFlashcard({ ...draftFlashcard, definition: e.target.value })} 
@@ -572,10 +572,10 @@ export default function TeacherAssignActivity() {
                         rows={4}
                         style={{
                           padding: '12px 16px',
-                          backgroundColor: '#1e293b',
-                          border: '1px solid #334155',
+                          backgroundColor: '#ffffff',
+                          border: '1px solid #e2e8f0',
                           borderRadius: '8px',
-                          color: '#fff',
+                          color: '#1e293b',
                           fontSize: '14px',
                           outline: 'none',
                           resize: 'vertical',
@@ -587,14 +587,14 @@ export default function TeacherAssignActivity() {
                           e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
                         }}
                         onBlur={(e) => {
-                          e.currentTarget.style.borderColor = '#334155';
+                          e.currentTarget.style.borderColor = '#e2e8f0';
                           e.currentTarget.style.boxShadow = 'none';
                         }}
                       />
                     </label>
 
                     <label style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <span style={{ fontSize: '14px', fontWeight: '600', color: '#fff' }}>Image URL (optional)</span>
+                      <span style={{ fontSize: '14px', fontWeight: '600', color: '#1e293b' }}>Image URL (optional)</span>
                       <input 
                         value={draftFlashcard.image} 
                         onChange={(e) => setDraftFlashcard({ ...draftFlashcard, image: e.target.value })} 
@@ -602,10 +602,10 @@ export default function TeacherAssignActivity() {
                         placeholder="https://example.com/image.jpg"
                         style={{
                           padding: '12px 16px',
-                          backgroundColor: '#1e293b',
-                          border: '1px solid #334155',
+                          backgroundColor: '#ffffff',
+                          border: '1px solid #e2e8f0',
                           borderRadius: '8px',
-                          color: '#fff',
+                          color: '#1e293b',
                           fontSize: '14px',
                           outline: 'none',
                           transition: 'all 0.2s'
@@ -615,7 +615,7 @@ export default function TeacherAssignActivity() {
                           e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
                         }}
                         onBlur={(e) => {
-                          e.currentTarget.style.borderColor = '#334155';
+                          e.currentTarget.style.borderColor = '#e2e8f0';
                           e.currentTarget.style.boxShadow = 'none';
                         }}
                       />
@@ -629,21 +629,21 @@ export default function TeacherAssignActivity() {
                       style={{
                         padding: '10px 20px',
                         backgroundColor: 'transparent',
-                        border: '1px solid #334155',
+                        border: '1px solid #e2e8f0',
                         borderRadius: '8px',
-                        color: '#94a3b8',
+                        color: '#64748b',
                         fontSize: '14px',
                         fontWeight: '600',
                         cursor: 'pointer',
                         transition: 'all 0.2s'
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#1e293b';
-                        e.currentTarget.style.color = '#fff';
+                        e.currentTarget.style.backgroundColor = '#f1f5f9';
+                        e.currentTarget.style.color = '#1e293b';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.backgroundColor = 'transparent';
-                        e.currentTarget.style.color = '#94a3b8';
+                        e.currentTarget.style.color = '#64748b';
                       }}
                     >
                       Cancel
@@ -696,19 +696,19 @@ export default function TeacherAssignActivity() {
                 onClick={(e) => e.stopPropagation()}
                 style={{ 
                   maxWidth: '700px',
-                  backgroundColor: '#0f1729',
-                  border: '1px solid rgba(99, 102, 241, 0.2)',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #e2e8f0',
                   borderRadius: '12px',
-                  boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
+                  boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15)'
                 }}
               >
                 <section className="td-badge-modal" style={{ padding: '32px' }}>
                   <div className="td-badge-modal-head" style={{ marginBottom: '24px', borderBottom: 'none', paddingBottom: '0' }}>
                     <div>
-                      <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#fff', marginBottom: '8px' }}>
+                      <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#1e293b', marginBottom: '8px' }}>
                         {editingQuiz ? 'Edit Quiz Question' : 'New Quiz Question'}
                       </h2>
-                      <p style={{ fontSize: '14px', color: '#94a3b8' }}>Create a quiz question with answer choices.</p>
+                      <p style={{ fontSize: '14px', color: '#64748b' }}>Create a quiz question with answer choices.</p>
                     </div>
                     <button 
                       className="tcc-inline-icon" 
@@ -724,7 +724,7 @@ export default function TeacherAssignActivity() {
                         borderRadius: '6px',
                         backgroundColor: 'transparent',
                         border: 'none',
-                        color: '#94a3b8',
+                        color: '#64748b',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
@@ -732,12 +732,12 @@ export default function TeacherAssignActivity() {
                         transition: 'all 0.2s'
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.1)';
-                        e.currentTarget.style.color = '#fff';
+                        e.currentTarget.style.backgroundColor = '#e0e7ff';
+                        e.currentTarget.style.color = '#4f46e5';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.backgroundColor = 'transparent';
-                        e.currentTarget.style.color = '#94a3b8';
+                        e.currentTarget.style.color = '#64748b';
                       }}
                     >
                       <X size={18} />
@@ -746,7 +746,7 @@ export default function TeacherAssignActivity() {
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <label style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <span style={{ fontSize: '14px', fontWeight: '600', color: '#fff' }}>Question</span>
+                      <span style={{ fontSize: '14px', fontWeight: '600', color: '#1e293b' }}>Question</span>
                       <textarea 
                         value={draftQuiz.question} 
                         onChange={(e) => setDraftQuiz({ ...draftQuiz, question: e.target.value })} 
@@ -754,10 +754,10 @@ export default function TeacherAssignActivity() {
                         rows={3}
                         style={{
                           padding: '12px 16px',
-                          backgroundColor: '#1e293b',
-                          border: '1px solid #334155',
+                          backgroundColor: '#ffffff',
+                          border: '1px solid #e2e8f0',
                           borderRadius: '8px',
-                          color: '#fff',
+                          color: '#1e293b',
                           fontSize: '14px',
                           outline: 'none',
                           resize: 'vertical',
@@ -769,14 +769,14 @@ export default function TeacherAssignActivity() {
                           e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
                         }}
                         onBlur={(e) => {
-                          e.currentTarget.style.borderColor = '#334155';
+                          e.currentTarget.style.borderColor = '#e2e8f0';
                           e.currentTarget.style.boxShadow = 'none';
                         }}
                       />
                     </label>
 
                     <label style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <span style={{ fontSize: '14px', fontWeight: '600', color: '#fff' }}>Question Type</span>
+                      <span style={{ fontSize: '14px', fontWeight: '600', color: '#1e293b' }}>Question Type</span>
                       <select
                         value={draftQuiz.type}
                         onChange={(e) => {
@@ -791,10 +791,10 @@ export default function TeacherAssignActivity() {
                         }}
                         style={{
                           padding: '12px 16px',
-                          backgroundColor: '#1e293b',
-                          border: '1px solid #334155',
+                          backgroundColor: '#ffffff',
+                          border: '1px solid #e2e8f0',
                           borderRadius: '8px',
-                          color: '#fff',
+                          color: '#1e293b',
                           fontSize: '14px',
                           outline: 'none',
                           cursor: 'pointer',
@@ -805,7 +805,7 @@ export default function TeacherAssignActivity() {
                           e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
                         }}
                         onBlur={(e) => {
-                          e.currentTarget.style.borderColor = '#334155';
+                          e.currentTarget.style.borderColor = '#e2e8f0';
                           e.currentTarget.style.boxShadow = 'none';
                         }}
                       >
@@ -817,7 +817,7 @@ export default function TeacherAssignActivity() {
 
                     {draftQuiz.type === 'multiple_choice' && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <span style={{ fontSize: '14px', fontWeight: '600', color: '#fff' }}>Options</span>
+                        <span style={{ fontSize: '14px', fontWeight: '600', color: '#1e293b' }}>Options</span>
                         {draftQuiz.options.map((option, idx) => (
                           <input
                             key={idx}
@@ -831,10 +831,10 @@ export default function TeacherAssignActivity() {
                             placeholder={`Option ${idx + 1}`}
                             style={{
                               padding: '12px 16px',
-                              backgroundColor: '#1e293b',
-                              border: '1px solid #334155',
+                              backgroundColor: '#ffffff',
+                              border: '1px solid #e2e8f0',
                               borderRadius: '8px',
-                              color: '#fff',
+                              color: '#1e293b',
                               fontSize: '14px',
                               outline: 'none',
                               transition: 'all 0.2s'
@@ -844,7 +844,7 @@ export default function TeacherAssignActivity() {
                               e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
                             }}
                             onBlur={(e) => {
-                              e.currentTarget.style.borderColor = '#334155';
+                              e.currentTarget.style.borderColor = '#e2e8f0';
                               e.currentTarget.style.boxShadow = 'none';
                             }}
                           />
@@ -854,7 +854,7 @@ export default function TeacherAssignActivity() {
 
                     {draftQuiz.type === 'true_false' && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <span style={{ fontSize: '14px', fontWeight: '600', color: '#fff' }}>Options</span>
+                        <span style={{ fontSize: '14px', fontWeight: '600', color: '#1e293b' }}>Options</span>
                         {draftQuiz.options.map((option, idx) => (
                           <input
                             key={idx}
@@ -864,10 +864,10 @@ export default function TeacherAssignActivity() {
                             disabled
                             style={{
                               padding: '12px 16px',
-                              backgroundColor: '#0f1729',
-                              border: '1px solid #334155',
+                              backgroundColor: '#f8fafc',
+                              border: '1px solid #e2e8f0',
                               borderRadius: '8px',
-                              color: '#64748b',
+                              color: '#94a3b8',
                               fontSize: '14px',
                               cursor: 'not-allowed'
                             }}
@@ -877,7 +877,7 @@ export default function TeacherAssignActivity() {
                     )}
 
                     <label style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <span style={{ fontSize: '14px', fontWeight: '600', color: '#fff' }}>Correct Answer</span>
+                      <span style={{ fontSize: '14px', fontWeight: '600', color: '#1e293b' }}>Correct Answer</span>
                       <input 
                         value={draftQuiz.answer} 
                         onChange={(e) => setDraftQuiz({ ...draftQuiz, answer: e.target.value })} 
@@ -885,10 +885,10 @@ export default function TeacherAssignActivity() {
                         placeholder={draftQuiz.type === 'true_false' ? 'Enter "True" or "False"' : 'Enter the correct answer'}
                         style={{
                           padding: '12px 16px',
-                          backgroundColor: '#1e293b',
-                          border: '1px solid #334155',
+                          backgroundColor: '#ffffff',
+                          border: '1px solid #e2e8f0',
                           borderRadius: '8px',
-                          color: '#fff',
+                          color: '#1e293b',
                           fontSize: '14px',
                           outline: 'none',
                           transition: 'all 0.2s'
@@ -898,7 +898,7 @@ export default function TeacherAssignActivity() {
                           e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
                         }}
                         onBlur={(e) => {
-                          e.currentTarget.style.borderColor = '#334155';
+                          e.currentTarget.style.borderColor = '#e2e8f0';
                           e.currentTarget.style.boxShadow = 'none';
                         }}
                       />
@@ -912,21 +912,21 @@ export default function TeacherAssignActivity() {
                       style={{
                         padding: '10px 20px',
                         backgroundColor: 'transparent',
-                        border: '1px solid #334155',
+                        border: '1px solid #e2e8f0',
                         borderRadius: '8px',
-                        color: '#94a3b8',
+                        color: '#64748b',
                         fontSize: '14px',
                         fontWeight: '600',
                         cursor: 'pointer',
                         transition: 'all 0.2s'
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#1e293b';
-                        e.currentTarget.style.color = '#fff';
+                        e.currentTarget.style.backgroundColor = '#f1f5f9';
+                        e.currentTarget.style.color = '#1e293b';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.backgroundColor = 'transparent';
-                        e.currentTarget.style.color = '#94a3b8';
+                        e.currentTarget.style.color = '#64748b';
                       }}
                     >
                       Cancel
@@ -979,20 +979,20 @@ export default function TeacherAssignActivity() {
                 onClick={(e) => e.stopPropagation()}
                 style={{ 
                   maxWidth: '650px',
-                  backgroundColor: '#0f1729',
-                  border: '1px solid rgba(99, 102, 241, 0.2)',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #e2e8f0',
                   borderRadius: '12px',
-                  boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
+                  boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15)'
                 }}
               >
                 <section className="td-badge-modal" style={{ padding: '32px' }}>
                   <div className="td-badge-modal-head" style={{ marginBottom: '24px', borderBottom: 'none', paddingBottom: '0' }}>
                     <div>
-                      <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#fff', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#1e293b', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Sparkles size={24} style={{ color: '#6366f1' }} />
                         Generate {generateType === 'flashcards' ? 'Flashcards' : 'Quiz Questions'} with AI
                       </h2>
-                      <p style={{ fontSize: '14px', color: '#94a3b8' }}>
+                      <p style={{ fontSize: '14px', color: '#64748b' }}>
                         Use AI to generate content from your text or uploaded files.
                       </p>
                     </div>
@@ -1010,7 +1010,7 @@ export default function TeacherAssignActivity() {
                         borderRadius: '6px',
                         backgroundColor: 'transparent',
                         border: 'none',
-                        color: '#94a3b8',
+                        color: '#64748b',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
@@ -1018,12 +1018,12 @@ export default function TeacherAssignActivity() {
                         transition: 'all 0.2s'
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.1)';
-                        e.currentTarget.style.color = '#fff';
+                        e.currentTarget.style.backgroundColor = '#e0e7ff';
+                        e.currentTarget.style.color = '#4f46e5';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.backgroundColor = 'transparent';
-                        e.currentTarget.style.color = '#94a3b8';
+                        e.currentTarget.style.color = '#64748b';
                       }}
                     >
                       <X size={18} />
@@ -1034,10 +1034,11 @@ export default function TeacherAssignActivity() {
                     <div style={{ 
                       padding: '12px', 
                       marginBottom: '20px', 
-                      backgroundColor: '#991b1b', 
-                      color: '#fecaca', 
+                      backgroundColor: '#fee2e2', 
+                      color: '#991b1b', 
                       borderRadius: '8px',
-                      fontSize: '14px'
+                      fontSize: '14px',
+                      border: '1px solid #fecaca'
                     }}>
                       {generateError}
                     </div>
@@ -1045,16 +1046,16 @@ export default function TeacherAssignActivity() {
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <label style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <span style={{ fontSize: '14px', fontWeight: '600', color: '#fff' }}>Content Source</span>
+                      <span style={{ fontSize: '14px', fontWeight: '600', color: '#1e293b' }}>Content Source</span>
                       <select
                         value={generateSource}
                         onChange={(e) => setGenerateSource(e.target.value as any)}
                         style={{
                           padding: '12px 16px',
-                          backgroundColor: '#1e293b',
-                          border: '1px solid #334155',
+                          backgroundColor: '#ffffff',
+                          border: '1px solid #e2e8f0',
                           borderRadius: '8px',
-                          color: '#fff',
+                          color: '#1e293b',
                           fontSize: '14px',
                           outline: 'none',
                           cursor: 'pointer'
@@ -1068,7 +1069,7 @@ export default function TeacherAssignActivity() {
 
                     {generateSource === 'text' && (
                       <label style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <span style={{ fontSize: '14px', fontWeight: '600', color: '#fff' }}>Your Content</span>
+                        <span style={{ fontSize: '14px', fontWeight: '600', color: '#1e293b' }}>Your Content</span>
                         <textarea 
                           value={generateText}
                           onChange={(e) => setGenerateText(e.target.value)}
@@ -1076,10 +1077,10 @@ export default function TeacherAssignActivity() {
                           rows={6}
                           style={{
                             padding: '12px 16px',
-                            backgroundColor: '#1e293b',
-                            border: '1px solid #334155',
+                            backgroundColor: '#ffffff',
+                            border: '1px solid #e2e8f0',
                             borderRadius: '8px',
-                            color: '#fff',
+                            color: '#1e293b',
                             fontSize: '14px',
                             outline: 'none',
                             resize: 'vertical',
@@ -1091,7 +1092,7 @@ export default function TeacherAssignActivity() {
 
                     {(generateSource === 'pdf' || generateSource === 'powerpoint') && (
                       <label style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <span style={{ fontSize: '14px', fontWeight: '600', color: '#fff' }}>
+                        <span style={{ fontSize: '14px', fontWeight: '600', color: '#1e293b' }}>
                           Upload {generateSource === 'pdf' ? 'PDF' : 'PowerPoint'} File
                         </span>
                         <input
@@ -1100,16 +1101,16 @@ export default function TeacherAssignActivity() {
                           onChange={(e) => setGenerateFile(e.target.files?.[0] || null)}
                           style={{
                             padding: '12px 16px',
-                            backgroundColor: '#1e293b',
-                            border: '1px solid #334155',
+                            backgroundColor: '#ffffff',
+                            border: '1px solid #e2e8f0',
                             borderRadius: '8px',
-                            color: '#fff',
+                            color: '#1e293b',
                             fontSize: '14px',
                             cursor: 'pointer'
                           }}
                         />
                         {generateFile && (
-                          <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
+                          <p style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
                             Selected: {generateFile.name}
                           </p>
                         )}
@@ -1118,16 +1119,16 @@ export default function TeacherAssignActivity() {
 
                     {generateType === 'quiz' && (
                       <label style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <span style={{ fontSize: '14px', fontWeight: '600', color: '#fff' }}>Question Type</span>
+                        <span style={{ fontSize: '14px', fontWeight: '600', color: '#1e293b' }}>Question Type</span>
                         <select
                           value={generateQuestionType}
                           onChange={(e) => setGenerateQuestionType(e.target.value as any)}
                           style={{
                             padding: '12px 16px',
-                            backgroundColor: '#1e293b',
-                            border: '1px solid #334155',
+                            backgroundColor: '#ffffff',
+                            border: '1px solid #e2e8f0',
                             borderRadius: '8px',
-                            color: '#fff',
+                            color: '#1e293b',
                             fontSize: '14px',
                             outline: 'none',
                             cursor: 'pointer'
@@ -1142,7 +1143,7 @@ export default function TeacherAssignActivity() {
                     )}
 
                     <label style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <span style={{ fontSize: '14px', fontWeight: '600', color: '#fff' }}>
+                      <span style={{ fontSize: '14px', fontWeight: '600', color: '#1e293b' }}>
                         Number of Items (1-50)
                       </span>
                       <input
@@ -1153,10 +1154,10 @@ export default function TeacherAssignActivity() {
                         onChange={(e) => setGenerateCount(Math.min(50, Math.max(1, parseInt(e.target.value) || 5)))}
                         style={{
                           padding: '12px 16px',
-                          backgroundColor: '#1e293b',
-                          border: '1px solid #334155',
+                          backgroundColor: '#ffffff',
+                          border: '1px solid #e2e8f0',
                           borderRadius: '8px',
-                          color: '#fff',
+                          color: '#1e293b',
                           fontSize: '14px',
                           outline: 'none'
                         }}
@@ -1172,9 +1173,9 @@ export default function TeacherAssignActivity() {
                       style={{
                         padding: '10px 20px',
                         backgroundColor: 'transparent',
-                        border: '1px solid #334155',
+                        border: '1px solid #e2e8f0',
                         borderRadius: '8px',
-                        color: '#94a3b8',
+                        color: '#64748b',
                         fontSize: '14px',
                         fontWeight: '600',
                         cursor: isGenerating ? 'not-allowed' : 'pointer',

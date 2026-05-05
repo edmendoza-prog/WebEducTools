@@ -56,6 +56,8 @@ Route::prefix('api')->middleware('auth:sanctum')->group(function () {
 		// Practice Tests
 		Route::get('/practice-tests', [App\Http\Controllers\PracticeTestController::class, 'index']);
 		Route::post('/practice-tests', [App\Http\Controllers\PracticeTestController::class, 'store']);
+		Route::get('/practice-tests/{id}', [App\Http\Controllers\PracticeTestController::class, 'show']);
+		Route::put('/practice-tests/{id}', [App\Http\Controllers\PracticeTestController::class, 'update']);
 		Route::delete('/practice-tests/{id}', [App\Http\Controllers\PracticeTestController::class, 'destroy']);
 		Route::post('/practice-tests/generate-questions', [App\Http\Controllers\PracticeTestController::class, 'generateQuestions']);
 	});

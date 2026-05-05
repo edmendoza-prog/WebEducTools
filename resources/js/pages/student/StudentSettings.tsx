@@ -40,7 +40,6 @@ const navItems: NavItem[] = [
   { label: 'Quiz', path: '/student-dashboard/quiz', icon: <HelpCircle size={18} /> },
   { label: 'Test', path: '/student-dashboard/practice-tests', icon: <Clock3 size={18} /> },
   { label: 'Reports', path: '/student-dashboard/reports', icon: <BarChart3 size={18} /> },
-  { label: 'Search & Collaboration', path: '/student-dashboard/library', icon: <Users size={18} /> },
 ];
 
 /** Preset avatar options represented as colored circles with emoji characters */
@@ -324,14 +323,6 @@ export default function StudentSettings() {
           </div>
 
           <div className="ss-user-actions">
-            <button
-              type="button"
-              className="ss-quick-action"
-              onClick={() => navigate('/student-dashboard/library')}
-              aria-label="Open mail"
-            >
-              <Mail size={14} />
-            </button>
             <button
               type="button"
               className="ss-quick-action"

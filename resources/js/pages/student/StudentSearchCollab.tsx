@@ -57,7 +57,7 @@ export default function StudentSearchCollab() {
     <StudentLayout>
       <section className="ss-panel">
         <div className="ss-panel-head">
-          <h2>Search &amp; Collaboration</h2>
+          <h2>Library</h2>
           <Users size={16} />
         </div>
         <p className="ss-insight">Search study sets, browse public materials, and access shared content from your groups.</p>

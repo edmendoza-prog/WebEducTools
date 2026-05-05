@@ -145,12 +145,25 @@ class PracticeTestController extends Controller
     public function generateQuestions(Request $request): JsonResponse
     {
         try {
-            $questionType = $request->input('questionType');
+            // Handle both old single type and new multiple types format
+            $questionTypesInput = $request->input('questionTypes');
+            if ($questionTypesInput) {
+                // New format: JSON array of types
+                $questionTypes = json_decode($questionTypesInput, true);
+                if (!is_array($questionTypes)) {
+                    $questionTypes = [$questionTypesInput];
+                }
+            } else {
+                // Fallback to old format for backward compatibility
+                $singleType = $request->input('questionType', 'multiple_choice');
+                $questionTypes = [$singleType];
+            }
+
             $source = $request->input('source');
-            $questionCount = (int) $request->input('questionCount', 5);
+            $totalQuestionCount = (int) $request->input('questionCount', 5);
 
             // Limit to prevent abuse
-            $questionCount = min(max($questionCount, 1), 50);
+            $totalQuestionCount = min(max($totalQuestionCount, 1), 50);
 
             // Extract content based on source
             $content = '';
@@ -182,13 +195,25 @@ class PracticeTestController extends Controller
                 ], 400);
             }
 
-            // Generate questions using AI
-            // TODO: Integrate with OpenAI API or similar
-            $questions = $this->generateQuestionsFromContent($content, $questionType, $questionCount);
+            // Distribute questions across selected types
+            $allQuestions = [];
+            $typesCount = count($questionTypes);
+            $questionsPerType = (int) floor($totalQuestionCount / $typesCount);
+            $remainingQuestions = $totalQuestionCount % $typesCount;
+
+            foreach ($questionTypes as $index => $questionType) {
+                // Add one extra question to first types if there's a remainder
+                $countForThisType = $questionsPerType + ($index < $remainingQuestions ? 1 : 0);
+                
+                if ($countForThisType > 0) {
+                    $questions = $this->generateQuestionsFromContent($content, $questionType, $countForThisType);
+                    $allQuestions = array_merge($allQuestions, $questions);
+                }
+            }
 
             return response()->json([
                 'success' => true,
-                'questions' => $questions,
+                'questions' => $allQuestions,
             ]);
         } catch (\Exception $e) {
             Log::error('Failed to generate questions: ' . $e->getMessage());
@@ -333,6 +358,157 @@ class PracticeTestController extends Controller
     }
 
     /**
+     * Get practice test details for teacher (view/edit)
+     */
+    public function show($id): JsonResponse
+    {
+        try {
+            $teacherId = auth()->id();
+
+            $test = DB::table('practice_tests')
+                ->where('id', $id)
+                ->where('teacher_id', $teacherId)
+                ->first();
+
+            if (!$test) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Practice test not found',
+                ], 404);
+            }
+
+            // Get questions
+            $questions = DB::table('practice_test_questions')
+                ->where('practice_test_id', $id)
+                ->orderBy('order_number')
+                ->get()
+                ->map(function ($q) {
+                    $data = [
+                        'id' => (string) $q->id,
+                        'type' => $q->question_type,
+                        'question' => $q->question_text,
+                        'points' => (int) $q->points,
+                    ];
+
+                    if ($q->question_type === 'multiple_choice') {
+                        $options = json_decode($q->options, true);
+                        $data['options'] = $options;
+                        $data['correctAnswer'] = (int) $q->correct_answer;
+                    } elseif ($q->question_type === 'true_false') {
+                        $data['correctAnswer'] = (bool) $q->correct_answer;
+                    } elseif ($q->question_type === 'identification') {
+                        $data['correctAnswer'] = $q->correct_answer;
+                    }
+
+                    return $data;
+                });
+
+            return response()->json([
+                'success' => true,
+                'test' => [
+                    'id' => $test->id,
+                    'title' => $test->title,
+                    'subject' => $test->subject,
+                    'className' => $test->class_name,
+                    'duration' => (int) $test->duration,
+                    'instructions' => $test->instructions,
+                    'questions' => $questions,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to get practice test: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load practice test',
+            ], 500);
+        }
+    }
+
+    /**
+     * Update a practice test
+     */
+    public function update(Request $request, $id): JsonResponse
+    {
+        try {
+            $teacherId = auth()->id();
+
+            $test = DB::table('practice_tests')
+                ->where('id', $id)
+                ->where('teacher_id', $teacherId)
+                ->first();
+
+            if (!$test) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Practice test not found',
+                ], 404);
+            }
+
+            $validated = $request->validate([
+                'title' => 'required|string|max:255',
+                'subject' => 'required|string|max:100',
+                'className' => 'nullable|string|max:100',
+                'duration' => 'required|integer|min:1',
+                'instructions' => 'nullable|string',
+                'questions' => 'required|array|min:1',
+            ]);
+
+            // Update test
+            DB::table('practice_tests')
+                ->where('id', $id)
+                ->update([
+                    'title' => $validated['title'],
+                    'subject' => $validated['subject'],
+                    'class_name' => $validated['className'] ?? null,
+                    'duration' => $validated['duration'],
+                    'instructions' => $validated['instructions'] ?? '',
+                    'updated_at' => now(),
+                ]);
+
+            // Delete old questions
+            DB::table('practice_test_questions')
+                ->where('practice_test_id', $id)
+                ->delete();
+
+            // Insert new questions
+            $orderNumber = 1;
+            foreach ($validated['questions'] as $question) {
+                $questionData = [
+                    'practice_test_id' => $id,
+                    'question_type' => $question['type'],
+                    'question_text' => $question['question'],
+                    'points' => $question['points'] ?? 1,
+                    'order_number' => $orderNumber++,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+
+                if ($question['type'] === 'multiple_choice') {
+                    $questionData['options'] = json_encode($question['options']);
+                    $questionData['correct_answer'] = (string) $question['correctAnswer'];
+                } elseif ($question['type'] === 'true_false') {
+                    $questionData['correct_answer'] = $question['correctAnswer'] ? '1' : '0';
+                } elseif ($question['type'] === 'identification') {
+                    $questionData['correct_answer'] = $question['correctAnswer'];
+                }
+
+                DB::table('practice_test_questions')->insert($questionData);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Practice test updated successfully',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to update practice test: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update practice test',
+            ], 500);
+        }
+    }
+
+    /**
      * Get practice tests for students
      */
     public function studentIndex(): JsonResponse
@@ -453,11 +629,26 @@ class PracticeTestController extends Controller
         try {
             $studentId = auth()->id();
             $answers = $request->input('answers', []);
+            
+            // Ensure answers is an array
+            if (!is_array($answers)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid answers format',
+                ], 400);
+            }
 
             // Get test questions
             $questions = DB::table('practice_test_questions')
                 ->where('practice_test_id', $id)
                 ->get();
+                
+            if ($questions->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No questions found for this test',
+                ], 404);
+            }
 
             $correctCount = 0;
             $totalPoints = 0;
@@ -466,16 +657,29 @@ class PracticeTestController extends Controller
             foreach ($questions as $question) {
                 $totalPoints += $question->points;
                 $correctAnswer = json_decode($question->correct_answer, true);
+                
+                // Handle legacy format (plain value) vs new format (JSON object)
+                if (!is_array($correctAnswer)) {
+                    // Legacy format - convert to new format
+                    if ($question->question_type === 'multiple_choice') {
+                        $correctAnswer = ['index' => (int)$question->correct_answer];
+                    } elseif ($question->question_type === 'true_false') {
+                        $correctAnswer = ['value' => (bool)$question->correct_answer];
+                    } elseif ($question->question_type === 'identification') {
+                        $correctAnswer = ['text' => $question->correct_answer];
+                    }
+                }
+                
                 $studentAnswer = $answers[$question->id] ?? null;
 
                 $isCorrect = false;
 
                 if ($question->question_type === 'multiple_choice') {
-                    $isCorrect = (int)$studentAnswer === (int)$correctAnswer['index'];
+                    $isCorrect = isset($correctAnswer['index']) && (int)$studentAnswer === (int)$correctAnswer['index'];
                 } elseif ($question->question_type === 'true_false') {
-                    $isCorrect = $studentAnswer === ($correctAnswer['value'] ? 'true' : 'false');
+                    $isCorrect = isset($correctAnswer['value']) && $studentAnswer === ($correctAnswer['value'] ? 'true' : 'false');
                 } elseif ($question->question_type === 'identification') {
-                    $isCorrect = strtolower(trim($studentAnswer ?? '')) === strtolower(trim($correctAnswer['text']));
+                    $isCorrect = isset($correctAnswer['text']) && strtolower(trim($studentAnswer ?? '')) === strtolower(trim($correctAnswer['text']));
                 }
 
                 if ($isCorrect) {
@@ -511,7 +715,7 @@ class PracticeTestController extends Controller
                     'user_id' => $test->teacher_id,
                     'created_by' => $studentId,
                     'type' => 'teacher_alert',
-                    'title' => 'Student completed practice test',
+                    'title' => 'Student completed test',
                     'message' => $studentName.' completed "'.$test->title.'" with '.$scorePercentage.'%.',
                     'payload' => json_encode([
                         'practice_test_id' => $id,
@@ -563,20 +767,33 @@ class PracticeTestController extends Controller
 
             $questionsWithResults = $questions->map(function ($q) use ($studentAnswers) {
                 $correctAnswer = json_decode($q->correct_answer, true);
+                
+                // Handle legacy format (plain value) vs new format (JSON object)
+                if (!is_array($correctAnswer)) {
+                    // Legacy format - convert to new format
+                    if ($q->question_type === 'multiple_choice') {
+                        $correctAnswer = ['index' => (int)$q->correct_answer];
+                    } elseif ($q->question_type === 'true_false') {
+                        $correctAnswer = ['value' => (bool)$q->correct_answer];
+                    } elseif ($q->question_type === 'identification') {
+                        $correctAnswer = ['text' => $q->correct_answer];
+                    }
+                }
+                
                 $studentAnswer = $studentAnswers[$q->id] ?? null;
 
                 $isCorrect = false;
                 $correctAnswerStr = '';
 
                 if ($q->question_type === 'multiple_choice') {
-                    $correctAnswerStr = (string)$correctAnswer['index'];
-                    $isCorrect = (int)$studentAnswer === (int)$correctAnswer['index'];
+                    $correctAnswerStr = isset($correctAnswer['index']) ? (string)$correctAnswer['index'] : '';
+                    $isCorrect = isset($correctAnswer['index']) && (int)$studentAnswer === (int)$correctAnswer['index'];
                 } elseif ($q->question_type === 'true_false') {
-                    $correctAnswerStr = $correctAnswer['value'] ? 'true' : 'false';
-                    $isCorrect = $studentAnswer === $correctAnswerStr;
+                    $correctAnswerStr = isset($correctAnswer['value']) && $correctAnswer['value'] ? 'true' : 'false';
+                    $isCorrect = isset($correctAnswer['value']) && $studentAnswer === $correctAnswerStr;
                 } elseif ($q->question_type === 'identification') {
-                    $correctAnswerStr = $correctAnswer['text'];
-                    $isCorrect = strtolower(trim($studentAnswer ?? '')) === strtolower(trim($correctAnswerStr));
+                    $correctAnswerStr = $correctAnswer['text'] ?? '';
+                    $isCorrect = isset($correctAnswer['text']) && strtolower(trim($studentAnswer ?? '')) === strtolower(trim($correctAnswerStr));
                 }
 
                 return [

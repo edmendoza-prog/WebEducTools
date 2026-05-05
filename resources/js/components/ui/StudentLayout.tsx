@@ -30,7 +30,6 @@ const navItems: StudentNav[] = [
   { label: 'Activity', path: '/student-dashboard/quiz', icon: <HelpCircle size={18} /> },
   { label: 'Test', path: '/student-dashboard/practice-tests', icon: <FileText size={18} /> },
   { label: 'Reports', path: '/student-dashboard/reports', icon: <BarChart3 size={18} /> },
-  { label: 'Search & Collaboration', path: '/student-dashboard/library', icon: <Users size={18} /> },
 ];
 
 type AuthMeResponse = {
